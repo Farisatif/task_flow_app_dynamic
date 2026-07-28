@@ -35,7 +35,7 @@ class RemindersScreen extends StatelessWidget {
                       background: Container(
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.symmetric(horizontal: 20),
-                        decoration: BoxDecoration(color: AppColors.priorityHigh.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(16)),
+                        decoration: BoxDecoration(color: AppColors.priorityHigh.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
                         child: const Icon(Icons.delete_outline, color: AppColors.priorityHigh),
                       ),
                       onDismissed: (_) => db.remindersDao.deleteReminder(r.id),

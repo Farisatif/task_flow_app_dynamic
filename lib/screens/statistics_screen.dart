@@ -85,7 +85,7 @@ class StatisticsScreen extends StatelessWidget {
                             color: AppColors.primary,
                             barWidth: 3,
                             dotData: const FlDotData(show: false),
-                            belowBarData: BarAreaData(show: true, color: AppColors.primary.withValues(alpha: 0.12)),
+                            belowBarData: BarAreaData(show: true, color: AppColors.primary.withOpacity(0.12)),
                           ),
                         ],
                       ),
@@ -123,7 +123,7 @@ class StatisticsScreen extends StatelessWidget {
                     AppColors.accentPink,
                   ];
 
-                  final sections = categoryMap.entries.asMap().entries.map((entry) {
+                  final sections = categoryMap.entries.toList().asMap().entries.map((entry) {
                     final index = entry.key;
                     final category = entry.value.key;
                     final count = entry.value.value;
@@ -155,7 +155,7 @@ class StatisticsScreen extends StatelessWidget {
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: categoryMap.entries.asMap().entries.map((entry) {
+                          children: categoryMap.entries.toList().asMap().entries.map((entry) {
                             final index = entry.key;
                             final category = entry.value.key;
                             final count = entry.value.value;

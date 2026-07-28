@@ -7,6 +7,8 @@ import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/task_tile.dart';
+import '../widgets/quick_add_modal.dart';
+import '../core/utils/sound_service.dart';
 import '../core/theme/app_colors.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -22,9 +24,10 @@ class HomeScreen extends StatelessWidget {
       navIndex: 0,
       showNav: true,
       floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/quick-add'),
+        onPressed: () => QuickAddModal.show(context),
         backgroundColor: AppColors.primary,
-        child: const Icon(Icons.add, color: Colors.white),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
       ),
       body: StreamBuilder<List<Task>>(
         stream: db.tasksDao.watchTasksForDate(DateTime.now()),
@@ -50,7 +53,7 @@ class HomeScreen extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 24,
-                        backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                        backgroundColor: AppColors.primary.withOpacity(0.15),
                         child: const Icon(Icons.person, color: AppColors.primary),
                       ),
                       const SizedBox(width: 12),
@@ -81,7 +84,7 @@ class HomeScreen extends StatelessWidget {
                       percent: progress.clamp(0, 1),
                       animation: true,
                       circularStrokeCap: CircularStrokeCap.round,
-                      backgroundColor: Colors.white.withValues(alpha: 0.25),
+                      backgroundColor: Colors.white.withOpacity(0.25),
                       progressColor: Colors.white,
                       center: Text('${(progress * 100).round()}%',
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -126,7 +129,10 @@ class HomeScreen extends StatelessWidget {
                 ...tasks.take(4).map((t) => TaskTile(
                       task: t,
                       onTap: () => context.push('/task-details/${t.id}'),
-                      onCheck: (v) => db.tasksDao.setStatus(t.id, v == true ? TaskStatus.completed : TaskStatus.pending),
+                      onCheck: (v) {
+                        if (v == true) SoundService.playTaskComplete(context);
+                        db.tasksDao.setStatus(t.id, v == true ? TaskStatus.completed : TaskStatus.pending);
+                      },
                     )),
               const SizedBox(height: 8),
               _quickAccessGrid(context),
@@ -141,9 +147,9 @@ class HomeScreen extends StatelessWidget {
                   return Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.accentOrange.withValues(alpha: 0.15),
+                      color: AppColors.accentOrange.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.accentOrange.withValues(alpha: 0.3)),
+                      border: Border.all(color: AppColors.accentOrange.withOpacity(0.3)),
                     ),
                     child: Row(
                       children: [
@@ -222,7 +228,7 @@ class HomeScreen extends StatelessWidget {
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: it.$3.withValues(alpha: 0.15), shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: it.$3.withOpacity(0.15), shape: BoxShape.circle),
                   child: Icon(it.$2, color: it.$3),
                 ),
                 const SizedBox(height: 8),

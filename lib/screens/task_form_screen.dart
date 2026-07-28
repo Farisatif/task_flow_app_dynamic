@@ -216,7 +216,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                     builder: (context, snapshot) {
                       final cats = snapshot.data ?? [];
                       return DropdownButtonFormField<int?>(
-                        initialValue: _categoryId,
+                        value: _categoryId,
                         decoration: const InputDecoration(hintText: 'بدون تصنيف'),
                         items: [
                           const DropdownMenuItem(value: null, child: Text('بدون تصنيف')),
@@ -234,7 +234,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                     builder: (context, snapshot) {
                       final projects = snapshot.data ?? [];
                       return DropdownButtonFormField<int?>(
-                        initialValue: _projectId,
+                        value: _projectId,
                         decoration: const InputDecoration(hintText: 'بدون مشروع'),
                         items: [
                           const DropdownMenuItem(value: null, child: Text('بدون مشروع')),

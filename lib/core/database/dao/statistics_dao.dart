@@ -235,7 +235,7 @@ class StatisticsDao extends DatabaseAccessor<AppDatabase> with _$StatisticsDaoMi
     final day = DateTime(today.year, today.month, today.day);
 
     return (select(tasks)
-          ..where((t) => t.date.isSmallerThanValue(day) & t.status.notEquals(TaskStatus.completed) & t.isDeleted.equals(false)))
+          ..where((t) => t.date.isSmallerThanValue(day) & t.status.equalsExp(Constant(false))(TaskStatus.completed) & t.isDeleted.equals(false)))
         .watch()
         .map((taskList) => taskList.length);
   }

@@ -18,7 +18,7 @@ class QuickAddScreen extends StatelessWidget {
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-        backgroundColor: Colors.black.withValues(alpha: 0.4),
+        backgroundColor: Colors.black.withOpacity(0.4),
         appBar: AppBar(backgroundColor: Colors.transparent, elevation: 0, title: const Text('إضافة سريعة', style: TextStyle(color: Colors.white))),
         body: Padding(
           padding: const EdgeInsets.all(20),
@@ -45,7 +45,7 @@ class QuickAddScreen extends StatelessWidget {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(color: it.$3.withValues(alpha: 0.15), shape: BoxShape.circle),
+                            decoration: BoxDecoration(color: it.$3.withOpacity(0.15), shape: BoxShape.circle),
                             child: Icon(it.$2, color: it.$3),
                           ),
                           const SizedBox(height: 8),

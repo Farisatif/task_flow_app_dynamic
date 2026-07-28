@@ -2004,11 +2004,14 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
   late final GeneratedColumn<int> endMinutes = GeneratedColumn<int>(
       'end_minutes', aliasedName, false,
       type: DriftSqlType.int, requiredDuringInsert: true);
+  static const VerificationMeta _priorityMeta =
+      const VerificationMeta('priority');
   @override
   late final GeneratedColumnWithTypeConverter<TaskPriority, int> priority =
       GeneratedColumn<int>('priority', aliasedName, false,
               type: DriftSqlType.int, requiredDuringInsert: true)
           .withConverter<TaskPriority>($TasksTable.$converterpriority);
+  static const VerificationMeta _statusMeta = const VerificationMeta('status');
   @override
   late final GeneratedColumnWithTypeConverter<TaskStatus, int> status =
       GeneratedColumn<int>('status', aliasedName, false,
@@ -2130,6 +2133,8 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     } else if (isInserting) {
       context.missing(_endMinutesMeta);
     }
+    context.handle(_priorityMeta, const VerificationResult.success());
+    context.handle(_statusMeta, const VerificationResult.success());
     if (data.containsKey('category_id')) {
       context.handle(
           _categoryIdMeta,
@@ -3395,6 +3400,7 @@ class $AttachmentsTable extends Attachments
       type: DriftSqlType.int,
       requiredDuringInsert: false,
       defaultValue: const Constant(0));
+  static const VerificationMeta _kindMeta = const VerificationMeta('kind');
   @override
   late final GeneratedColumnWithTypeConverter<AttachmentKind, int> kind =
       GeneratedColumn<int>('kind', aliasedName, false,
@@ -3442,6 +3448,7 @@ class $AttachmentsTable extends Attachments
       context.handle(_sizeBytesMeta,
           sizeBytes.isAcceptableOrUnknown(data['size_bytes']!, _sizeBytesMeta));
     }
+    context.handle(_kindMeta, const VerificationResult.success());
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -4796,6 +4803,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final FocusSessionsDao focusSessionsDao =
       FocusSessionsDao(this as AppDatabase);
   late final ProfileDao profileDao = ProfileDao(this as AppDatabase);
+  late final StatisticsDao statisticsDao = StatisticsDao(this as AppDatabase);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -5228,11 +5236,12 @@ final class $$CategoriesTableReferences
   static MultiTypedResultKey<$TasksTable, List<Task>> _tasksRefsTable(
           _$AppDatabase db) =>
       MultiTypedResultKey.fromTable(db.tasks,
-          aliasName: 'categories__id__tasks__category_id');
+          aliasName:
+              $_aliasNameGenerator(db.categories.id, db.tasks.categoryId));
 
   $$TasksTableProcessedTableManager get tasksRefs {
     final manager = $$TasksTableTableManager($_db, $_db.tasks)
-        .filter((f) => f.categoryId.id.sqlEquals($_itemColumn<int>('id')!));
+        .filter((f) => f.categoryId.id($_item.id));
 
     final cache = $_typedResult.readTableOrNull(_tasksRefsTable($_db));
     return ProcessedTableManager(
@@ -5434,7 +5443,7 @@ class $$CategoriesTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (tasksRefs)
-                    await $_getPrefetchedData<Category, $CategoriesTable, Task>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable:
                             $$CategoriesTableReferences._tasksRefsTable(db),
@@ -5490,11 +5499,11 @@ final class $$GoalsTableReferences
   static MultiTypedResultKey<$SubGoalsTable, List<SubGoal>> _subGoalsRefsTable(
           _$AppDatabase db) =>
       MultiTypedResultKey.fromTable(db.subGoals,
-          aliasName: 'goals__id__sub_goals__goal_id');
+          aliasName: $_aliasNameGenerator(db.goals.id, db.subGoals.goalId));
 
   $$SubGoalsTableProcessedTableManager get subGoalsRefs {
     final manager = $$SubGoalsTableTableManager($_db, $_db.subGoals)
-        .filter((f) => f.goalId.id.sqlEquals($_itemColumn<int>('id')!));
+        .filter((f) => f.goalId.id($_item.id));
 
     final cache = $_typedResult.readTableOrNull(_subGoalsRefsTable($_db));
     return ProcessedTableManager(
@@ -5504,11 +5513,11 @@ final class $$GoalsTableReferences
   static MultiTypedResultKey<$ProjectsTable, List<Project>> _projectsRefsTable(
           _$AppDatabase db) =>
       MultiTypedResultKey.fromTable(db.projects,
-          aliasName: 'goals__id__projects__goal_id');
+          aliasName: $_aliasNameGenerator(db.goals.id, db.projects.goalId));
 
   $$ProjectsTableProcessedTableManager get projectsRefs {
     final manager = $$ProjectsTableTableManager($_db, $_db.projects)
-        .filter((f) => f.goalId.id.sqlEquals($_itemColumn<int>('id')!));
+        .filter((f) => f.goalId.id($_item.id));
 
     final cache = $_typedResult.readTableOrNull(_projectsRefsTable($_db));
     return ProcessedTableManager(
@@ -5518,11 +5527,11 @@ final class $$GoalsTableReferences
   static MultiTypedResultKey<$TasksTable, List<Task>> _tasksRefsTable(
           _$AppDatabase db) =>
       MultiTypedResultKey.fromTable(db.tasks,
-          aliasName: 'goals__id__tasks__goal_id');
+          aliasName: $_aliasNameGenerator(db.goals.id, db.tasks.goalId));
 
   $$TasksTableProcessedTableManager get tasksRefs {
     final manager = $$TasksTableTableManager($_db, $_db.tasks)
-        .filter((f) => f.goalId.id.sqlEquals($_itemColumn<int>('id')!));
+        .filter((f) => f.goalId.id($_item.id));
 
     final cache = $_typedResult.readTableOrNull(_tasksRefsTable($_db));
     return ProcessedTableManager(
@@ -5824,7 +5833,7 @@ class $$GoalsTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (subGoalsRefs)
-                    await $_getPrefetchedData<Goal, $GoalsTable, SubGoal>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable:
                             $$GoalsTableReferences._subGoalsRefsTable(db),
@@ -5835,7 +5844,7 @@ class $$GoalsTableTableManager extends RootTableManager<
                             referencedItems.where((e) => e.goalId == item.id),
                         typedResults: items),
                   if (projectsRefs)
-                    await $_getPrefetchedData<Goal, $GoalsTable, Project>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable:
                             $$GoalsTableReferences._projectsRefsTable(db),
@@ -5846,7 +5855,7 @@ class $$GoalsTableTableManager extends RootTableManager<
                             referencedItems.where((e) => e.goalId == item.id),
                         typedResults: items),
                   if (tasksRefs)
-                    await $_getPrefetchedData<Goal, $GoalsTable, Task>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable:
                             $$GoalsTableReferences._tasksRefsTable(db),
@@ -5893,14 +5902,13 @@ final class $$SubGoalsTableReferences
     extends BaseReferences<_$AppDatabase, $SubGoalsTable, SubGoal> {
   $$SubGoalsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $GoalsTable _goalIdTable(_$AppDatabase db) =>
-      db.goals.createAlias('sub_goals__goal_id__goals__id');
+  static $GoalsTable _goalIdTable(_$AppDatabase db) => db.goals
+      .createAlias($_aliasNameGenerator(db.subGoals.goalId, db.goals.id));
 
-  $$GoalsTableProcessedTableManager get goalId {
-    final $_column = $_itemColumn<int>('goal_id')!;
-
+  $$GoalsTableProcessedTableManager? get goalId {
+    if ($_item.goalId == null) return null;
     final manager = $$GoalsTableTableManager($_db, $_db.goals)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.goalId!));
     final item = $_typedResult.readTableOrNull(_goalIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -6149,14 +6157,13 @@ final class $$ProjectsTableReferences
     extends BaseReferences<_$AppDatabase, $ProjectsTable, Project> {
   $$ProjectsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $GoalsTable _goalIdTable(_$AppDatabase db) =>
-      db.goals.createAlias('projects__goal_id__goals__id');
+  static $GoalsTable _goalIdTable(_$AppDatabase db) => db.goals
+      .createAlias($_aliasNameGenerator(db.projects.goalId, db.goals.id));
 
   $$GoalsTableProcessedTableManager? get goalId {
-    final $_column = $_itemColumn<int>('goal_id');
-    if ($_column == null) return null;
+    if ($_item.goalId == null) return null;
     final manager = $$GoalsTableTableManager($_db, $_db.goals)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.goalId!));
     final item = $_typedResult.readTableOrNull(_goalIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -6166,11 +6173,11 @@ final class $$ProjectsTableReferences
   static MultiTypedResultKey<$TasksTable, List<Task>> _tasksRefsTable(
           _$AppDatabase db) =>
       MultiTypedResultKey.fromTable(db.tasks,
-          aliasName: 'projects__id__tasks__project_id');
+          aliasName: $_aliasNameGenerator(db.projects.id, db.tasks.projectId));
 
   $$TasksTableProcessedTableManager get tasksRefs {
     final manager = $$TasksTableTableManager($_db, $_db.tasks)
-        .filter((f) => f.projectId.id.sqlEquals($_itemColumn<int>('id')!));
+        .filter((f) => f.projectId.id($_item.id));
 
     final cache = $_typedResult.readTableOrNull(_tasksRefsTable($_db));
     return ProcessedTableManager(
@@ -6471,7 +6478,7 @@ class $$ProjectsTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (tasksRefs)
-                    await $_getPrefetchedData<Project, $ProjectsTable, Task>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable:
                             $$ProjectsTableReferences._tasksRefsTable(db),
@@ -6537,28 +6544,26 @@ final class $$TasksTableReferences
     extends BaseReferences<_$AppDatabase, $TasksTable, Task> {
   $$TasksTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $CategoriesTable _categoryIdTable(_$AppDatabase db) =>
-      db.categories.createAlias('tasks__category_id__categories__id');
+  static $CategoriesTable _categoryIdTable(_$AppDatabase db) => db.categories
+      .createAlias($_aliasNameGenerator(db.tasks.categoryId, db.categories.id));
 
   $$CategoriesTableProcessedTableManager? get categoryId {
-    final $_column = $_itemColumn<int>('category_id');
-    if ($_column == null) return null;
+    if ($_item.categoryId == null) return null;
     final manager = $$CategoriesTableTableManager($_db, $_db.categories)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.categoryId!));
     final item = $_typedResult.readTableOrNull(_categoryIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: [item]));
   }
 
-  static $ProjectsTable _projectIdTable(_$AppDatabase db) =>
-      db.projects.createAlias('tasks__project_id__projects__id');
+  static $ProjectsTable _projectIdTable(_$AppDatabase db) => db.projects
+      .createAlias($_aliasNameGenerator(db.tasks.projectId, db.projects.id));
 
   $$ProjectsTableProcessedTableManager? get projectId {
-    final $_column = $_itemColumn<int>('project_id');
-    if ($_column == null) return null;
+    if ($_item.projectId == null) return null;
     final manager = $$ProjectsTableTableManager($_db, $_db.projects)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.projectId!));
     final item = $_typedResult.readTableOrNull(_projectIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -6566,13 +6571,12 @@ final class $$TasksTableReferences
   }
 
   static $GoalsTable _goalIdTable(_$AppDatabase db) =>
-      db.goals.createAlias('tasks__goal_id__goals__id');
+      db.goals.createAlias($_aliasNameGenerator(db.tasks.goalId, db.goals.id));
 
   $$GoalsTableProcessedTableManager? get goalId {
-    final $_column = $_itemColumn<int>('goal_id');
-    if ($_column == null) return null;
+    if ($_item.goalId == null) return null;
     final manager = $$GoalsTableTableManager($_db, $_db.goals)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.goalId!));
     final item = $_typedResult.readTableOrNull(_goalIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -6580,13 +6584,13 @@ final class $$TasksTableReferences
   }
 
   static MultiTypedResultKey<$RemindersTable, List<Reminder>>
-      _remindersRefsTable(_$AppDatabase db) =>
-          MultiTypedResultKey.fromTable(db.reminders,
-              aliasName: 'tasks__id__reminders__task_id');
+      _remindersRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+          db.reminders,
+          aliasName: $_aliasNameGenerator(db.tasks.id, db.reminders.taskId));
 
   $$RemindersTableProcessedTableManager get remindersRefs {
     final manager = $$RemindersTableTableManager($_db, $_db.reminders)
-        .filter((f) => f.taskId.id.sqlEquals($_itemColumn<int>('id')!));
+        .filter((f) => f.taskId.id($_item.id));
 
     final cache = $_typedResult.readTableOrNull(_remindersRefsTable($_db));
     return ProcessedTableManager(
@@ -6596,11 +6600,11 @@ final class $$TasksTableReferences
   static MultiTypedResultKey<$NotesTable, List<Note>> _notesRefsTable(
           _$AppDatabase db) =>
       MultiTypedResultKey.fromTable(db.notes,
-          aliasName: 'tasks__id__notes__task_id');
+          aliasName: $_aliasNameGenerator(db.tasks.id, db.notes.taskId));
 
   $$NotesTableProcessedTableManager get notesRefs {
     final manager = $$NotesTableTableManager($_db, $_db.notes)
-        .filter((f) => f.taskId.id.sqlEquals($_itemColumn<int>('id')!));
+        .filter((f) => f.taskId.id($_item.id));
 
     final cache = $_typedResult.readTableOrNull(_notesRefsTable($_db));
     return ProcessedTableManager(
@@ -6608,13 +6612,13 @@ final class $$TasksTableReferences
   }
 
   static MultiTypedResultKey<$AttachmentsTable, List<Attachment>>
-      _attachmentsRefsTable(_$AppDatabase db) =>
-          MultiTypedResultKey.fromTable(db.attachments,
-              aliasName: 'tasks__id__attachments__task_id');
+      _attachmentsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+          db.attachments,
+          aliasName: $_aliasNameGenerator(db.tasks.id, db.attachments.taskId));
 
   $$AttachmentsTableProcessedTableManager get attachmentsRefs {
     final manager = $$AttachmentsTableTableManager($_db, $_db.attachments)
-        .filter((f) => f.taskId.id.sqlEquals($_itemColumn<int>('id')!));
+        .filter((f) => f.taskId.id($_item.id));
 
     final cache = $_typedResult.readTableOrNull(_attachmentsRefsTable($_db));
     return ProcessedTableManager(
@@ -6624,11 +6628,12 @@ final class $$TasksTableReferences
   static MultiTypedResultKey<$FocusSessionsTable, List<FocusSession>>
       _focusSessionsRefsTable(_$AppDatabase db) =>
           MultiTypedResultKey.fromTable(db.focusSessions,
-              aliasName: 'tasks__id__focus_sessions__task_id');
+              aliasName:
+                  $_aliasNameGenerator(db.tasks.id, db.focusSessions.taskId));
 
   $$FocusSessionsTableProcessedTableManager get focusSessionsRefs {
     final manager = $$FocusSessionsTableTableManager($_db, $_db.focusSessions)
-        .filter((f) => f.taskId.id.sqlEquals($_itemColumn<int>('id')!));
+        .filter((f) => f.taskId.id($_item.id));
 
     final cache = $_typedResult.readTableOrNull(_focusSessionsRefsTable($_db));
     return ProcessedTableManager(
@@ -7277,7 +7282,7 @@ class $$TasksTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (remindersRefs)
-                    await $_getPrefetchedData<Task, $TasksTable, Reminder>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable:
                             $$TasksTableReferences._remindersRefsTable(db),
@@ -7288,7 +7293,7 @@ class $$TasksTableTableManager extends RootTableManager<
                             referencedItems.where((e) => e.taskId == item.id),
                         typedResults: items),
                   if (notesRefs)
-                    await $_getPrefetchedData<Task, $TasksTable, Note>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable:
                             $$TasksTableReferences._notesRefsTable(db),
@@ -7299,7 +7304,7 @@ class $$TasksTableTableManager extends RootTableManager<
                             referencedItems.where((e) => e.taskId == item.id),
                         typedResults: items),
                   if (attachmentsRefs)
-                    await $_getPrefetchedData<Task, $TasksTable, Attachment>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable:
                             $$TasksTableReferences._attachmentsRefsTable(db),
@@ -7311,7 +7316,7 @@ class $$TasksTableTableManager extends RootTableManager<
                             referencedItems.where((e) => e.taskId == item.id),
                         typedResults: items),
                   if (focusSessionsRefs)
-                    await $_getPrefetchedData<Task, $TasksTable, FocusSession>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable:
                             $$TasksTableReferences._focusSessionsRefsTable(db),
@@ -7369,14 +7374,13 @@ final class $$RemindersTableReferences
     extends BaseReferences<_$AppDatabase, $RemindersTable, Reminder> {
   $$RemindersTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $TasksTable _taskIdTable(_$AppDatabase db) =>
-      db.tasks.createAlias('reminders__task_id__tasks__id');
+  static $TasksTable _taskIdTable(_$AppDatabase db) => db.tasks
+      .createAlias($_aliasNameGenerator(db.reminders.taskId, db.tasks.id));
 
   $$TasksTableProcessedTableManager? get taskId {
-    final $_column = $_itemColumn<int>('task_id');
-    if ($_column == null) return null;
+    if ($_item.taskId == null) return null;
     final manager = $$TasksTableTableManager($_db, $_db.tasks)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.taskId!));
     final item = $_typedResult.readTableOrNull(_taskIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -7653,13 +7657,12 @@ final class $$NotesTableReferences
   $$NotesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $TasksTable _taskIdTable(_$AppDatabase db) =>
-      db.tasks.createAlias('notes__task_id__tasks__id');
+      db.tasks.createAlias($_aliasNameGenerator(db.notes.taskId, db.tasks.id));
 
   $$TasksTableProcessedTableManager? get taskId {
-    final $_column = $_itemColumn<int>('task_id');
-    if ($_column == null) return null;
+    if ($_item.taskId == null) return null;
     final manager = $$TasksTableTableManager($_db, $_db.tasks)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.taskId!));
     final item = $_typedResult.readTableOrNull(_taskIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -7946,14 +7949,13 @@ final class $$AttachmentsTableReferences
     extends BaseReferences<_$AppDatabase, $AttachmentsTable, Attachment> {
   $$AttachmentsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $TasksTable _taskIdTable(_$AppDatabase db) =>
-      db.tasks.createAlias('attachments__task_id__tasks__id');
+  static $TasksTable _taskIdTable(_$AppDatabase db) => db.tasks
+      .createAlias($_aliasNameGenerator(db.attachments.taskId, db.tasks.id));
 
   $$TasksTableProcessedTableManager? get taskId {
-    final $_column = $_itemColumn<int>('task_id');
-    if ($_column == null) return null;
+    if ($_item.taskId == null) return null;
     final manager = $$TasksTableTableManager($_db, $_db.tasks)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.taskId!));
     final item = $_typedResult.readTableOrNull(_taskIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -8247,13 +8249,13 @@ final class $$HabitsTableReferences
   $$HabitsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static MultiTypedResultKey<$HabitLogsTable, List<HabitLog>>
-      _habitLogsRefsTable(_$AppDatabase db) =>
-          MultiTypedResultKey.fromTable(db.habitLogs,
-              aliasName: 'habits__id__habit_logs__habit_id');
+      _habitLogsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+          db.habitLogs,
+          aliasName: $_aliasNameGenerator(db.habits.id, db.habitLogs.habitId));
 
   $$HabitLogsTableProcessedTableManager get habitLogsRefs {
     final manager = $$HabitLogsTableTableManager($_db, $_db.habitLogs)
-        .filter((f) => f.habitId.id.sqlEquals($_itemColumn<int>('id')!));
+        .filter((f) => f.habitId.id($_item.id));
 
     final cache = $_typedResult.readTableOrNull(_habitLogsRefsTable($_db));
     return ProcessedTableManager(
@@ -8481,7 +8483,7 @@ class $$HabitsTableTableManager extends RootTableManager<
               getPrefetchedDataCallback: (items) async {
                 return [
                   if (habitLogsRefs)
-                    await $_getPrefetchedData<Habit, $HabitsTable, HabitLog>(
+                    await $_getPrefetchedData(
                         currentTable: table,
                         referencedTable:
                             $$HabitsTableReferences._habitLogsRefsTable(db),
@@ -8528,14 +8530,13 @@ final class $$HabitLogsTableReferences
     extends BaseReferences<_$AppDatabase, $HabitLogsTable, HabitLog> {
   $$HabitLogsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $HabitsTable _habitIdTable(_$AppDatabase db) =>
-      db.habits.createAlias('habit_logs__habit_id__habits__id');
+  static $HabitsTable _habitIdTable(_$AppDatabase db) => db.habits
+      .createAlias($_aliasNameGenerator(db.habitLogs.habitId, db.habits.id));
 
-  $$HabitsTableProcessedTableManager get habitId {
-    final $_column = $_itemColumn<int>('habit_id')!;
-
+  $$HabitsTableProcessedTableManager? get habitId {
+    if ($_item.habitId == null) return null;
     final manager = $$HabitsTableTableManager($_db, $_db.habits)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.habitId!));
     final item = $_typedResult.readTableOrNull(_habitIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
@@ -8786,14 +8787,13 @@ final class $$FocusSessionsTableReferences
   $$FocusSessionsTableReferences(
       super.$_db, super.$_table, super.$_typedResult);
 
-  static $TasksTable _taskIdTable(_$AppDatabase db) =>
-      db.tasks.createAlias('focus_sessions__task_id__tasks__id');
+  static $TasksTable _taskIdTable(_$AppDatabase db) => db.tasks
+      .createAlias($_aliasNameGenerator(db.focusSessions.taskId, db.tasks.id));
 
   $$TasksTableProcessedTableManager? get taskId {
-    final $_column = $_itemColumn<int>('task_id');
-    if ($_column == null) return null;
+    if ($_item.taskId == null) return null;
     final manager = $$TasksTableTableManager($_db, $_db.tasks)
-        .filter((f) => f.id.sqlEquals($_column));
+        .filter((f) => f.id($_item.taskId!));
     final item = $_typedResult.readTableOrNull(_taskIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(

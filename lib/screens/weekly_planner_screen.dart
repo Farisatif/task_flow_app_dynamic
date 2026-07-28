@@ -53,7 +53,7 @@ class WeeklyPlannerScreen extends StatelessWidget {
                               children: tasks
                                   .map((t) => Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                        decoration: BoxDecoration(color: t.$2.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                                        decoration: BoxDecoration(color: t.$2.withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
                                         child: Text(t.$1, style: TextStyle(color: t.$2, fontSize: 12, fontWeight: FontWeight.w600)),
                                       ))
                                   .toList(),

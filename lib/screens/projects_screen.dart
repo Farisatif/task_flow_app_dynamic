@@ -41,7 +41,7 @@ class ProjectsScreen extends StatelessWidget {
                 background: Container(
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  decoration: BoxDecoration(color: AppColors.priorityHigh.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(16)),
+                  decoration: BoxDecoration(color: AppColors.priorityHigh.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
                   child: const Icon(Icons.delete_outline, color: AppColors.priorityHigh),
                 ),
                 confirmDismiss: (_) async {
@@ -66,7 +66,7 @@ class ProjectsScreen extends StatelessWidget {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(color: color.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(14)),
+                          decoration: BoxDecoration(color: color.withOpacity(0.15), borderRadius: BorderRadius.circular(14)),
                           child: Icon(icon, color: color),
                         ),
                         const SizedBox(width: 14),

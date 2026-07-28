@@ -57,7 +57,7 @@ class _NotesScreenState extends State<NotesScreen> {
                   }
                   return MasonryLikeGrid(
                     items: notes.map((n) {
-                      final bg = isDark ? Color(n.color).withValues(alpha: 0.18) : Color(n.color);
+                      final bg = isDark ? Color(n.color).withOpacity(0.18) : Color(n.color);
                       return GestureDetector(
                         onTap: () => _showNoteEditor(context, db, note: n),
                         onLongPress: () => _confirmDelete(context, db, n),

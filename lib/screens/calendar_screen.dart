@@ -67,7 +67,7 @@ class _CalendarScreenState extends State<CalendarScreen> {
                     });
                   },
                   calendarStyle: CalendarStyle(
-                    todayDecoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.4), shape: BoxShape.circle),
+                    todayDecoration: BoxDecoration(color: AppColors.primary.withOpacity(0.4), shape: BoxShape.circle),
                     selectedDecoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
                     markerDecoration: const BoxDecoration(color: AppColors.accentGreen, shape: BoxShape.circle),
                     outsideDaysVisible: false,

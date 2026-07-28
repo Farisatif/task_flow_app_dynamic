@@ -92,7 +92,7 @@ class AttachmentsScreen extends StatelessWidget {
                       child: ListTile(
                         leading: Container(
                           padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(color: _kindColor(a.kind).withValues(alpha: 0.15), borderRadius: BorderRadius.circular(12)),
+                          decoration: BoxDecoration(color: _kindColor(a.kind).withOpacity(0.15), borderRadius: BorderRadius.circular(12)),
                           child: Icon(_kindIcon(a.kind), color: _kindColor(a.kind)),
                         ),
                         title: Text(a.name, style: Theme.of(context).textTheme.titleSmall),
@@ -125,7 +125,7 @@ class AttachmentsScreen extends StatelessWidget {
               TextField(controller: nameController, autofocus: true, decoration: const InputDecoration(labelText: 'اسم الملف')),
               const SizedBox(height: 12),
               DropdownButtonFormField<AttachmentKind>(
-                initialValue: kind,
+                value: kind,
                 decoration: const InputDecoration(labelText: 'نوع الملف'),
                 items: AttachmentKind.values.map((k) => DropdownMenuItem(value: k, child: Text(_kindLabel(k)))).toList(),
                 onChanged: (v) => setDialogState(() => kind = v ?? kind),

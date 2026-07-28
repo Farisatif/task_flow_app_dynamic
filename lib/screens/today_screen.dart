@@ -85,7 +85,7 @@ class TodayScreen extends StatelessWidget {
                                                   margin: const EdgeInsets.only(bottom: 8),
                                                   padding: const EdgeInsets.all(12),
                                                   decoration: BoxDecoration(
-                                                    color: _priorityColor(t.priority).withValues(alpha: 0.12),
+                                                    color: _priorityColor(t.priority).withOpacity(0.12),
                                                     borderRadius: BorderRadius.circular(14),
                                                     border: Border(right: BorderSide(color: _priorityColor(t.priority), width: 3)),
                                                   ),

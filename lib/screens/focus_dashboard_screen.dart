@@ -107,7 +107,7 @@ class FocusDashboardScreen extends StatelessWidget {
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: statusColor.withValues(alpha: 0.15),
+                          color: statusColor.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(status, style: TextStyle(color: statusColor, fontSize: 12)),

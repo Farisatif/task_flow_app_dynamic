@@ -63,7 +63,7 @@ class MoreScreen extends StatelessWidget {
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: it.$3.withValues(alpha: 0.15), shape: BoxShape.circle),
+                            decoration: BoxDecoration(color: it.$3.withOpacity(0.15), shape: BoxShape.circle),
                             child: Icon(it.$2, color: it.$3),
                           ),
                           const SizedBox(height: 8),

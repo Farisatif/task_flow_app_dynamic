@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../core/database/tables.dart';
 import '../core/utils/task_extensions.dart';
 import '../core/database/database.dart';
+import 'task_action_menu.dart';
 
 class TaskTile extends StatelessWidget {
   final Task task;
@@ -15,6 +16,7 @@ class TaskTile extends StatelessWidget {
     final done = task.status == TaskStatus.completed;
     return InkWell(
       onTap: onTap,
+      onLongPress: () => TaskActionMenu.show(context, task),
       borderRadius: BorderRadius.circular(18),
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
@@ -46,7 +48,7 @@ class TaskTile extends StatelessWidget {
             ),
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(color: task.priorityColor().withValues(alpha: 0.15), borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(color: task.priorityColor().withOpacity(0.15), borderRadius: BorderRadius.circular(8)),
               child: Text(task.priorityLabel(), style: TextStyle(color: task.priorityColor(), fontSize: 11, fontWeight: FontWeight.w600)),
             ),
             const SizedBox(width: 8),

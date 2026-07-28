@@ -43,7 +43,7 @@ class HabitsScreen extends StatelessWidget {
                 background: Container(
                   alignment: Alignment.centerRight,
                   padding: const EdgeInsets.symmetric(horizontal: 20),
-                  decoration: BoxDecoration(color: AppColors.priorityHigh.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(16)),
+                  decoration: BoxDecoration(color: AppColors.priorityHigh.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
                   child: const Icon(Icons.delete_outline, color: AppColors.priorityHigh),
                 ),
                 confirmDismiss: (_) => _confirmDelete(context, 'حذف العادة "${h.title}"؟'),
@@ -59,7 +59,7 @@ class HabitsScreen extends StatelessWidget {
                           children: [
                             Container(
                               padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
+                              decoration: BoxDecoration(color: color.withOpacity(0.15), shape: BoxShape.circle),
                               child: Icon(icon, color: color, size: 18),
                             ),
                             const SizedBox(width: 10),

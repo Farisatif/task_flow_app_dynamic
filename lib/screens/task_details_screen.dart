@@ -69,7 +69,7 @@ class TaskDetailsScreen extends StatelessWidget {
                   Expanded(child: Text(task.title, style: Theme.of(context).textTheme.headlineSmall)),
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(color: task.priorityColor().withValues(alpha: 0.15), borderRadius: BorderRadius.circular(10)),
+                    decoration: BoxDecoration(color: task.priorityColor().withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
                     child: Text(task.priorityLabel(), style: TextStyle(color: task.priorityColor(), fontWeight: FontWeight.w600)),
                   ),
                 ],
