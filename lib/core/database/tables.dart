@@ -86,6 +86,7 @@ class Tasks extends Table {
   IntColumn get categoryId => integer().nullable().references(Categories, #id, onDelete: KeyAction.setNull)();
   IntColumn get projectId => integer().nullable().references(Projects, #id, onDelete: KeyAction.setNull)();
   IntColumn get goalId => integer().nullable().references(Goals, #id, onDelete: KeyAction.setNull)();
+  IntColumn get parentTaskId => integer().nullable().references(Tasks, #id, onDelete: KeyAction.cascade)();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
   DateTimeColumn get updatedAt => dateTime().withDefault(currentDateAndTime)();
   BoolColumn get isDeleted => boolean().withDefault(const Constant(false))();

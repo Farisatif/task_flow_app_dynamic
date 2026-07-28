@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart' as intl;
+import 'package:drift/drift.dart' show Value;
 import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../core/utils/task_extensions.dart';
@@ -30,112 +32,124 @@ class TaskDetailsScreen extends StatelessWidget {
           );
         }
 
-        final progress = task.status == TaskStatus.completed
-            ? 1.0
-            : task.status == TaskStatus.inProgress
-                ? 0.6
-                : 0.0;
-
         return AppScaffold(
           title: 'تفاصيل المهمة',
           showNav: false,
           actions: [
             IconButton(
-              icon: const Icon(Icons.delete_outline, color: AppColors.priorityHigh),
-              onPressed: () async {
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('حذف المهمة'),
-                    content: const Text('هل أنت متأكد من حذف هذه المهمة؟'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('إلغاء')),
-                      TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('حذف', style: TextStyle(color: AppColors.priorityHigh))),
-                    ],
-                  ),
-                );
-                if (confirmed == true) {
-                  await db.tasksDao.softDelete(task.id);
-                  if (context.mounted) context.pop();
-                }
-              },
+              icon: const Icon(Icons.edit_outlined),
+              onPressed: () => context.push('/task-form/${task.id}'),
             ),
           ],
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(20),
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(child: Text(task.title, style: Theme.of(context).textTheme.headlineSmall)),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(color: task.priorityColor().withOpacity(0.15), borderRadius: BorderRadius.circular(10)),
-                    child: Text(task.priorityLabel(), style: TextStyle(color: task.priorityColor(), fontWeight: FontWeight.w600)),
+                  Checkbox(
+                    value: task.status == TaskStatus.completed,
+                    onChanged: (v) => db.tasksDao.setStatus(task.id, v == true ? TaskStatus.completed : TaskStatus.pending),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          task.title,
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                decoration: task.status == TaskStatus.completed ? TextDecoration.lineThrough : null,
+                                color: task.status == TaskStatus.completed ? Colors.grey : null,
+                              ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 12,
+                          children: [
+                            _chip(context, Icons.calendar_today, intl.DateFormat('d MMM', 'ar').format(task.date)),
+                            _chip(context, Icons.access_time, task.timeRange),
+                            _chip(context, Icons.flag, task.priorityLabel(), color: task.priorityColor()),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
+              const Divider(height: 40),
+              _sectionHeader(context, 'المهام الفرعية', Icons.account_tree_outlined),
+              StreamBuilder<List<Task>>(
+                stream: db.tasksDao.watchSubtasks(taskId),
+                builder: (context, snapshot) {
+                  final subtasks = snapshot.data ?? [];
+                  return Column(
                     children: [
-                      _infoRow(context, Icons.calendar_today_outlined, 'التاريخ', '${task.date.year}-${task.date.month.toString().padLeft(2, '0')}-${task.date.day.toString().padLeft(2, '0')}'),
-                      const Divider(height: 24),
-                      _infoRow(context, Icons.access_time, 'الوقت', task.timeRange),
-                      const Divider(height: 24),
-                      _infoRow(context, Icons.flag_outlined, 'الحالة', _statusLabel(task.status)),
+                      ...subtasks.map((st) => ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Checkbox(
+                              value: st.status == TaskStatus.completed,
+                              onChanged: (v) => db.tasksDao.setStatus(st.id, v == true ? TaskStatus.completed : TaskStatus.pending),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            ),
+                            title: Text(
+                              st.title,
+                              style: TextStyle(
+                                decoration: st.status == TaskStatus.completed ? TextDecoration.lineThrough : null,
+                                color: st.status == TaskStatus.completed ? Colors.grey : null,
+                              ),
+                            ),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete_outline, size: 20, color: Colors.grey),
+                              onPressed: () => db.tasksDao.softDelete(st.id),
+                            ),
+                          )),
+                      _addSubtaskField(context, db),
                     ],
-                  ),
-                ),
+                  );
+                },
               ),
-              const SizedBox(height: 16),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('التقدم', style: Theme.of(context).textTheme.titleSmall),
-                  Text('${(progress * 100).round()}%', style: Theme.of(context).textTheme.titleSmall?.copyWith(color: AppColors.primary)),
-                ],
-              ),
+              const SizedBox(height: 24),
+              _sectionHeader(context, 'ملاحظات', Icons.notes),
               const SizedBox(height: 8),
-              ClipRRect(
-                borderRadius: BorderRadius.circular(10),
-                child: LinearProgressIndicator(value: progress, minHeight: 10, backgroundColor: Theme.of(context).dividerColor, color: AppColors.primary),
-              ),
-              const SizedBox(height: 20),
-              if (task.notes != null && task.notes!.isNotEmpty) ...[
-                Text('ملاحظات', style: Theme.of(context).textTheme.titleSmall),
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(color: Theme.of(context).cardTheme.color, borderRadius: BorderRadius.circular(14), border: Border.all(color: Theme.of(context).dividerColor)),
-                  child: Text(task.notes!, style: Theme.of(context).textTheme.bodyMedium),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardTheme.color,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Theme.of(context).dividerColor),
                 ),
-                const SizedBox(height: 20),
-              ],
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => context.push('/task-form/${task.id}'),
-                      icon: const Icon(Icons.edit_outlined),
-                      label: const Text('تعديل'),
+                child: Text(
+                  task.notes?.isNotEmpty == true ? task.notes! : 'لا توجد ملاحظات إضافية...',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(height: 1.5),
+                ),
+              ),
+              const SizedBox(height: 40),
+              TextButton.icon(
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('حذف المهمة'),
+                      content: const Text('هل أنت متأكد من حذف هذه المهمة بالكامل؟'),
+                      actions: [
+                        TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('إلغاء')),
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('حذف', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      style: FilledButton.styleFrom(backgroundColor: task.status == TaskStatus.completed ? AppColors.accentOrange : AppColors.accentGreen),
-                      onPressed: () => db.tasksDao.setStatus(
-                        task.id,
-                        task.status == TaskStatus.completed ? TaskStatus.pending : TaskStatus.completed,
-                      ),
-                      icon: Icon(task.status == TaskStatus.completed ? Icons.replay : Icons.check),
-                      label: Text(task.status == TaskStatus.completed ? 'إعادة فتح' : 'إتمام المهمة'),
-                    ),
-                  ),
-                ],
+                  );
+                  if (confirmed == true) {
+                    db.tasksDao.softDelete(taskId);
+                    if (context.mounted) Navigator.pop(context);
+                  }
+                },
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                label: const Text('حذف المهمة بالكامل', style: TextStyle(color: Colors.red)),
               ),
             ],
           ),
@@ -144,26 +158,58 @@ class TaskDetailsScreen extends StatelessWidget {
     );
   }
 
-  String _statusLabel(TaskStatus s) {
-    switch (s) {
-      case TaskStatus.completed:
-        return 'مكتملة';
-      case TaskStatus.inProgress:
-        return 'قيد التنفيذ';
-      case TaskStatus.pending:
-        return 'قيد الانتظار';
-    }
+  Widget _sectionHeader(BuildContext context, String title, IconData icon) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Colors.grey),
+          const SizedBox(width: 8),
+          Text(title, style: Theme.of(context).textTheme.titleSmall?.copyWith(color: Colors.grey)),
+        ],
+      ),
+    );
   }
 
-  Widget _infoRow(BuildContext context, IconData icon, String label, String value) {
+  Widget _chip(BuildContext context, IconData icon, String label, {Color? color}) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 18, color: AppColors.primary),
-        const SizedBox(width: 10),
-        Text(label, style: Theme.of(context).textTheme.bodyMedium),
-        const Spacer(),
-        Text(value, style: Theme.of(context).textTheme.titleSmall),
+        Icon(icon, size: 14, color: color ?? Colors.grey),
+        const SizedBox(width: 4),
+        Text(label, style: TextStyle(fontSize: 12, color: color ?? Colors.grey)),
       ],
+    );
+  }
+
+  Widget _addSubtaskField(BuildContext context, AppDatabase db) {
+    final controller = TextEditingController();
+    return Padding(
+      padding: const EdgeInsets.only(left: 12),
+      child: TextField(
+        controller: controller,
+        decoration: const InputDecoration(
+          hintText: 'إضافة مهمة فرعية...',
+          border: InputBorder.none,
+          prefixIcon: Icon(Icons.add, size: 20),
+        ),
+        onSubmitted: (val) {
+          if (val.trim().isNotEmpty) {
+            db.tasksDao.insertSubtask(
+              TasksCompanion.insert(
+                title: val.trim(),
+                date: DateTime.now(),
+                startMinutes: 0,
+                endMinutes: 0,
+                priority: TaskPriority.medium,
+                status: const Value(TaskStatus.pending),
+              ),
+              taskId,
+            );
+            controller.clear();
+          }
+        },
+      ),
     );
   }
 }

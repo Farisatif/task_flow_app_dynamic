@@ -1,8 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:provider/provider.dart';
 import '../widgets/app_scaffold.dart';
 import '../core/theme/app_colors.dart';
+import '../core/utils/sound_service.dart';
+import '../core/utils/settings_provider.dart';
 
 class FocusTimerScreen extends StatefulWidget {
   const FocusTimerScreen({super.key});
@@ -27,6 +30,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen> {
         if (_remaining <= 0) {
           t.cancel();
           setState(() => _running = false);
+          SoundService.playNotification(context);
           return;
         }
         setState(() => _remaining--);
@@ -57,71 +61,103 @@ class _FocusTimerScreenState extends State<FocusTimerScreen> {
   @override
   Widget build(BuildContext context) {
     final percent = 1 - (_remaining / totalSeconds);
+    final settings = context.watch<SettingsProvider>();
+
     return AppScaffold(
       title: 'مؤقت التركيز',
       showNav: false,
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
+      body: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              settings.primaryColor.withOpacity(0.05),
+              Theme.of(context).scaffoldBackgroundColor,
+            ],
+          ),
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 40),
+            Text(
+              _running ? 'حان وقت التركيز' : 'هل أنت مستعد؟',
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'جلسة بومودورو (25 دقيقة)',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+            ),
+            const Spacer(),
+            CircularPercentIndicator(
+              radius: 140,
+              lineWidth: 12,
+              percent: percent.clamp(0, 1),
+              animation: false,
+              circularStrokeCap: CircularStrokeCap.round,
+              backgroundColor: Theme.of(context).dividerColor.withOpacity(0.1),
+              progressColor: settings.primaryColor,
+              center: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('جلسة تركيز', style: Theme.of(context).textTheme.titleMedium),
-                  Text('تصميم واجهة التطبيق', style: Theme.of(context).textTheme.bodyMedium),
-                  const SizedBox(height: 24),
-                  CircularPercentIndicator(
-                    radius: 110,
-                    lineWidth: 14,
-                    percent: percent.clamp(0, 1),
-                    animation: false,
-                    circularStrokeCap: CircularStrokeCap.round,
-                    backgroundColor: Theme.of(context).dividerColor,
-                    progressColor: AppColors.primary,
-                    center: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(_label, style: Theme.of(context).textTheme.headlineLarge),
-                        const SizedBox(height: 4),
-                        Text('دقيقة', style: Theme.of(context).textTheme.bodySmall),
-                      ],
+                  Text(
+                    _label,
+                    style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                          fontWeight: FontWeight.w200,
+                          color: settings.primaryColor,
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'دقيقة',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(letterSpacing: 2),
+                  ),
+                ],
+              ),
+            ),
+            const Spacer(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 40),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _reset,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: const Text('إعادة تعيين'),
                     ),
                   ),
-                  const SizedBox(height: 28),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton.filledTonal(onPressed: _reset, icon: const Icon(Icons.replay)),
-                      const SizedBox(width: 20),
-                      FilledButton.icon(
-                        onPressed: _toggle,
-                        style: FilledButton.styleFrom(backgroundColor: AppColors.primary, padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16)),
-                        icon: Icon(_running ? Icons.pause : Icons.play_arrow),
-                        label: Text(_running ? 'إيقاف مؤقت' : 'بدء التركيز'),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 2,
+                    child: FilledButton(
+                      onPressed: _toggle,
+                      style: FilledButton.styleFrom(
+                        backgroundColor: settings.primaryColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                    ],
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(_running ? Icons.pause_rounded : Icons.play_arrow_rounded),
+                          const SizedBox(width: 8),
+                          Text(_running ? 'إيقاف مؤقت' : 'ابدأ الآن'),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text('جلسات اليوم', style: Theme.of(context).textTheme.titleSmall),
-          const SizedBox(height: 8),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: Column(
-                children: [
-                  ListTile(leading: const Icon(Icons.check_circle, color: AppColors.accentGreen), title: const Text('جلسة 1'), trailing: const Text('25:00')),
-                  const Divider(height: 1),
-                  ListTile(leading: Icon(Icons.circle_outlined, color: Theme.of(context).dividerColor), title: const Text('جلسة 2'), trailing: const Text('25:00')),
-                ],
-              ),
-            ),
-          ),
-        ],
+            const SizedBox(height: 20),
+          ],
+        ),
       ),
     );
   }

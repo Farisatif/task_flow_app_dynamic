@@ -2045,6 +2045,15 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
       requiredDuringInsert: false,
       defaultConstraints: GeneratedColumn.constraintIsAlways(
           'REFERENCES goals (id) ON DELETE SET NULL'));
+  static const VerificationMeta _parentTaskIdMeta =
+      const VerificationMeta('parentTaskId');
+  @override
+  late final GeneratedColumn<int> parentTaskId = GeneratedColumn<int>(
+      'parent_task_id', aliasedName, true,
+      type: DriftSqlType.int,
+      requiredDuringInsert: false,
+      defaultConstraints: GeneratedColumn.constraintIsAlways(
+          'REFERENCES tasks (id) ON DELETE CASCADE'));
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -2084,6 +2093,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         categoryId,
         projectId,
         goalId,
+        parentTaskId,
         createdAt,
         updatedAt,
         isDeleted
@@ -2149,6 +2159,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
       context.handle(_goalIdMeta,
           goalId.isAcceptableOrUnknown(data['goal_id']!, _goalIdMeta));
     }
+    if (data.containsKey('parent_task_id')) {
+      context.handle(
+          _parentTaskIdMeta,
+          parentTaskId.isAcceptableOrUnknown(
+              data['parent_task_id']!, _parentTaskIdMeta));
+    }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
           createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta));
@@ -2193,6 +2209,8 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
           .read(DriftSqlType.int, data['${effectivePrefix}project_id']),
       goalId: attachedDatabase.typeMapping
           .read(DriftSqlType.int, data['${effectivePrefix}goal_id']),
+      parentTaskId: attachedDatabase.typeMapping
+          .read(DriftSqlType.int, data['${effectivePrefix}parent_task_id']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.dateTime, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -2225,6 +2243,7 @@ class Task extends DataClass implements Insertable<Task> {
   final int? categoryId;
   final int? projectId;
   final int? goalId;
+  final int? parentTaskId;
   final DateTime createdAt;
   final DateTime updatedAt;
   final bool isDeleted;
@@ -2240,6 +2259,7 @@ class Task extends DataClass implements Insertable<Task> {
       this.categoryId,
       this.projectId,
       this.goalId,
+      this.parentTaskId,
       required this.createdAt,
       required this.updatedAt,
       required this.isDeleted});
@@ -2270,6 +2290,9 @@ class Task extends DataClass implements Insertable<Task> {
     if (!nullToAbsent || goalId != null) {
       map['goal_id'] = Variable<int>(goalId);
     }
+    if (!nullToAbsent || parentTaskId != null) {
+      map['parent_task_id'] = Variable<int>(parentTaskId);
+    }
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
     map['is_deleted'] = Variable<bool>(isDeleted);
@@ -2295,6 +2318,9 @@ class Task extends DataClass implements Insertable<Task> {
           : Value(projectId),
       goalId:
           goalId == null && nullToAbsent ? const Value.absent() : Value(goalId),
+      parentTaskId: parentTaskId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(parentTaskId),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       isDeleted: Value(isDeleted),
@@ -2318,6 +2344,7 @@ class Task extends DataClass implements Insertable<Task> {
       categoryId: serializer.fromJson<int?>(json['categoryId']),
       projectId: serializer.fromJson<int?>(json['projectId']),
       goalId: serializer.fromJson<int?>(json['goalId']),
+      parentTaskId: serializer.fromJson<int?>(json['parentTaskId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
       isDeleted: serializer.fromJson<bool>(json['isDeleted']),
@@ -2340,6 +2367,7 @@ class Task extends DataClass implements Insertable<Task> {
       'categoryId': serializer.toJson<int?>(categoryId),
       'projectId': serializer.toJson<int?>(projectId),
       'goalId': serializer.toJson<int?>(goalId),
+      'parentTaskId': serializer.toJson<int?>(parentTaskId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
       'isDeleted': serializer.toJson<bool>(isDeleted),
@@ -2358,6 +2386,7 @@ class Task extends DataClass implements Insertable<Task> {
           Value<int?> categoryId = const Value.absent(),
           Value<int?> projectId = const Value.absent(),
           Value<int?> goalId = const Value.absent(),
+          Value<int?> parentTaskId = const Value.absent(),
           DateTime? createdAt,
           DateTime? updatedAt,
           bool? isDeleted}) =>
@@ -2373,6 +2402,8 @@ class Task extends DataClass implements Insertable<Task> {
         categoryId: categoryId.present ? categoryId.value : this.categoryId,
         projectId: projectId.present ? projectId.value : this.projectId,
         goalId: goalId.present ? goalId.value : this.goalId,
+        parentTaskId:
+            parentTaskId.present ? parentTaskId.value : this.parentTaskId,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         isDeleted: isDeleted ?? this.isDeleted,
@@ -2394,6 +2425,9 @@ class Task extends DataClass implements Insertable<Task> {
           data.categoryId.present ? data.categoryId.value : this.categoryId,
       projectId: data.projectId.present ? data.projectId.value : this.projectId,
       goalId: data.goalId.present ? data.goalId.value : this.goalId,
+      parentTaskId: data.parentTaskId.present
+          ? data.parentTaskId.value
+          : this.parentTaskId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       isDeleted: data.isDeleted.present ? data.isDeleted.value : this.isDeleted,
@@ -2414,6 +2448,7 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('categoryId: $categoryId, ')
           ..write('projectId: $projectId, ')
           ..write('goalId: $goalId, ')
+          ..write('parentTaskId: $parentTaskId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted')
@@ -2434,6 +2469,7 @@ class Task extends DataClass implements Insertable<Task> {
       categoryId,
       projectId,
       goalId,
+      parentTaskId,
       createdAt,
       updatedAt,
       isDeleted);
@@ -2452,6 +2488,7 @@ class Task extends DataClass implements Insertable<Task> {
           other.categoryId == this.categoryId &&
           other.projectId == this.projectId &&
           other.goalId == this.goalId &&
+          other.parentTaskId == this.parentTaskId &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.isDeleted == this.isDeleted);
@@ -2469,6 +2506,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<int?> categoryId;
   final Value<int?> projectId;
   final Value<int?> goalId;
+  final Value<int?> parentTaskId;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
   final Value<bool> isDeleted;
@@ -2484,6 +2522,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.categoryId = const Value.absent(),
     this.projectId = const Value.absent(),
     this.goalId = const Value.absent(),
+    this.parentTaskId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
@@ -2500,6 +2539,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.categoryId = const Value.absent(),
     this.projectId = const Value.absent(),
     this.goalId = const Value.absent(),
+    this.parentTaskId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.isDeleted = const Value.absent(),
@@ -2520,6 +2560,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<int>? categoryId,
     Expression<int>? projectId,
     Expression<int>? goalId,
+    Expression<int>? parentTaskId,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
     Expression<bool>? isDeleted,
@@ -2536,6 +2577,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (categoryId != null) 'category_id': categoryId,
       if (projectId != null) 'project_id': projectId,
       if (goalId != null) 'goal_id': goalId,
+      if (parentTaskId != null) 'parent_task_id': parentTaskId,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (isDeleted != null) 'is_deleted': isDeleted,
@@ -2554,6 +2596,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       Value<int?>? categoryId,
       Value<int?>? projectId,
       Value<int?>? goalId,
+      Value<int?>? parentTaskId,
       Value<DateTime>? createdAt,
       Value<DateTime>? updatedAt,
       Value<bool>? isDeleted}) {
@@ -2569,6 +2612,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       categoryId: categoryId ?? this.categoryId,
       projectId: projectId ?? this.projectId,
       goalId: goalId ?? this.goalId,
+      parentTaskId: parentTaskId ?? this.parentTaskId,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       isDeleted: isDeleted ?? this.isDeleted,
@@ -2613,6 +2657,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     if (goalId.present) {
       map['goal_id'] = Variable<int>(goalId.value);
     }
+    if (parentTaskId.present) {
+      map['parent_task_id'] = Variable<int>(parentTaskId.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -2639,6 +2686,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('categoryId: $categoryId, ')
           ..write('projectId: $projectId, ')
           ..write('goalId: $goalId, ')
+          ..write('parentTaskId: $parentTaskId, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('isDeleted: $isDeleted')
@@ -4865,6 +4913,13 @@ abstract class _$AppDatabase extends GeneratedDatabase {
             on: TableUpdateQuery.onTableName('tasks',
                 limitUpdateKind: UpdateKind.delete),
             result: [
+              TableUpdate('tasks', kind: UpdateKind.delete),
+            ],
+          ),
+          WritePropagation(
+            on: TableUpdateQuery.onTableName('tasks',
+                limitUpdateKind: UpdateKind.delete),
+            result: [
               TableUpdate('reminders', kind: UpdateKind.delete),
             ],
           ),
@@ -6519,6 +6574,7 @@ typedef $$TasksTableCreateCompanionBuilder = TasksCompanion Function({
   Value<int?> categoryId,
   Value<int?> projectId,
   Value<int?> goalId,
+  Value<int?> parentTaskId,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<bool> isDeleted,
@@ -6535,6 +6591,7 @@ typedef $$TasksTableUpdateCompanionBuilder = TasksCompanion Function({
   Value<int?> categoryId,
   Value<int?> projectId,
   Value<int?> goalId,
+  Value<int?> parentTaskId,
   Value<DateTime> createdAt,
   Value<DateTime> updatedAt,
   Value<bool> isDeleted,
@@ -6578,6 +6635,19 @@ final class $$TasksTableReferences
     final manager = $$GoalsTableTableManager($_db, $_db.goals)
         .filter((f) => f.id($_item.goalId!));
     final item = $_typedResult.readTableOrNull(_goalIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+        manager.$state.copyWith(prefetchedData: [item]));
+  }
+
+  static $TasksTable _parentTaskIdTable(_$AppDatabase db) => db.tasks
+      .createAlias($_aliasNameGenerator(db.tasks.parentTaskId, db.tasks.id));
+
+  $$TasksTableProcessedTableManager? get parentTaskId {
+    if ($_item.parentTaskId == null) return null;
+    final manager = $$TasksTableTableManager($_db, $_db.tasks)
+        .filter((f) => f.id($_item.parentTaskId!));
+    final item = $_typedResult.readTableOrNull(_parentTaskIdTable($_db));
     if (item == null) return manager;
     return ProcessedTableManager(
         manager.$state.copyWith(prefetchedData: [item]));
@@ -6738,6 +6808,26 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
             $$GoalsTableFilterComposer(
               $db: $db,
               $table: $db.goals,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$TasksTableFilterComposer get parentTaskId {
+    final $$TasksTableFilterComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.parentTaskId,
+        referencedTable: $db.tasks,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$TasksTableFilterComposer(
+              $db: $db,
+              $table: $db.tasks,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -6933,6 +7023,26 @@ class $$TasksTableOrderingComposer
             ));
     return composer;
   }
+
+  $$TasksTableOrderingComposer get parentTaskId {
+    final $$TasksTableOrderingComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.parentTaskId,
+        referencedTable: $db.tasks,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$TasksTableOrderingComposer(
+              $db: $db,
+              $table: $db.tasks,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
 }
 
 class $$TasksTableAnnotationComposer
@@ -7029,6 +7139,26 @@ class $$TasksTableAnnotationComposer
             $$GoalsTableAnnotationComposer(
               $db: $db,
               $table: $db.goals,
+              $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+              joinBuilder: joinBuilder,
+              $removeJoinBuilderFromRootComposer:
+                  $removeJoinBuilderFromRootComposer,
+            ));
+    return composer;
+  }
+
+  $$TasksTableAnnotationComposer get parentTaskId {
+    final $$TasksTableAnnotationComposer composer = $composerBuilder(
+        composer: this,
+        getCurrentColumn: (t) => t.parentTaskId,
+        referencedTable: $db.tasks,
+        getReferencedColumn: (t) => t.id,
+        builder: (joinBuilder,
+                {$addJoinBuilderToRootComposer,
+                $removeJoinBuilderFromRootComposer}) =>
+            $$TasksTableAnnotationComposer(
+              $db: $db,
+              $table: $db.tasks,
               $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
               joinBuilder: joinBuilder,
               $removeJoinBuilderFromRootComposer:
@@ -7137,6 +7267,7 @@ class $$TasksTableTableManager extends RootTableManager<
         {bool categoryId,
         bool projectId,
         bool goalId,
+        bool parentTaskId,
         bool remindersRefs,
         bool notesRefs,
         bool attachmentsRefs,
@@ -7163,6 +7294,7 @@ class $$TasksTableTableManager extends RootTableManager<
             Value<int?> categoryId = const Value.absent(),
             Value<int?> projectId = const Value.absent(),
             Value<int?> goalId = const Value.absent(),
+            Value<int?> parentTaskId = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
@@ -7179,6 +7311,7 @@ class $$TasksTableTableManager extends RootTableManager<
             categoryId: categoryId,
             projectId: projectId,
             goalId: goalId,
+            parentTaskId: parentTaskId,
             createdAt: createdAt,
             updatedAt: updatedAt,
             isDeleted: isDeleted,
@@ -7195,6 +7328,7 @@ class $$TasksTableTableManager extends RootTableManager<
             Value<int?> categoryId = const Value.absent(),
             Value<int?> projectId = const Value.absent(),
             Value<int?> goalId = const Value.absent(),
+            Value<int?> parentTaskId = const Value.absent(),
             Value<DateTime> createdAt = const Value.absent(),
             Value<DateTime> updatedAt = const Value.absent(),
             Value<bool> isDeleted = const Value.absent(),
@@ -7211,6 +7345,7 @@ class $$TasksTableTableManager extends RootTableManager<
             categoryId: categoryId,
             projectId: projectId,
             goalId: goalId,
+            parentTaskId: parentTaskId,
             createdAt: createdAt,
             updatedAt: updatedAt,
             isDeleted: isDeleted,
@@ -7223,6 +7358,7 @@ class $$TasksTableTableManager extends RootTableManager<
               {categoryId = false,
               projectId = false,
               goalId = false,
+              parentTaskId = false,
               remindersRefs = false,
               notesRefs = false,
               attachmentsRefs = false,
@@ -7274,6 +7410,16 @@ class $$TasksTableTableManager extends RootTableManager<
                     referencedTable: $$TasksTableReferences._goalIdTable(db),
                     referencedColumn:
                         $$TasksTableReferences._goalIdTable(db).id,
+                  ) as T;
+                }
+                if (parentTaskId) {
+                  state = state.withJoin(
+                    currentTable: table,
+                    currentColumn: table.parentTaskId,
+                    referencedTable:
+                        $$TasksTableReferences._parentTaskIdTable(db),
+                    referencedColumn:
+                        $$TasksTableReferences._parentTaskIdTable(db).id,
                   ) as T;
                 }
 
@@ -7349,6 +7495,7 @@ typedef $$TasksTableProcessedTableManager = ProcessedTableManager<
         {bool categoryId,
         bool projectId,
         bool goalId,
+        bool parentTaskId,
         bool remindersRefs,
         bool notesRefs,
         bool attachmentsRefs,

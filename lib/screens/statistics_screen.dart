@@ -22,7 +22,7 @@ class StatisticsScreen extends StatelessWidget {
         children: [
           // إحصائيات المهام لليوم
           StreamBuilder<TaskStatistics>(
-            stream: db.statisticsDao.watchTaskStatisticsForToday(),
+            stream: db.statisticsDao.watchTaskStatisticsForDate(DateTime.now()),
             builder: (context, snapshot) {
               final stats = snapshot.data;
 

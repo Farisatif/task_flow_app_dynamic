@@ -16,6 +16,7 @@ class RemindersScreen extends StatelessWidget {
       showNav: false,
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primary,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         onPressed: () => _showAddDialog(context, db),
         child: const Icon(Icons.add_alert_outlined, color: Colors.white),
       ),
@@ -24,36 +25,77 @@ class RemindersScreen extends StatelessWidget {
         builder: (context, snapshot) {
           final reminders = snapshot.data ?? [];
           if (reminders.isEmpty) {
-            return Center(child: Text('لا توجد تذكيرات بعد', style: Theme.of(context).textTheme.bodyMedium));
+            return _buildEmptyState(context);
           }
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: reminders
-                .map((r) => Dismissible(
-                      key: ValueKey('reminder-${r.id}'),
-                      direction: DismissDirection.endToStart,
-                      background: Container(
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        decoration: BoxDecoration(color: AppColors.priorityHigh.withOpacity(0.15), borderRadius: BorderRadius.circular(16)),
-                        child: const Icon(Icons.delete_outline, color: AppColors.priorityHigh),
+          return ListView.builder(
+            padding: const EdgeInsets.all(20),
+            itemCount: reminders.length,
+            itemBuilder: (context, index) {
+              final r = reminders[index];
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Dismissible(
+                  key: ValueKey('reminder-${r.id}'),
+                  direction: DismissDirection.endToStart,
+                  background: Container(
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Icon(Icons.delete_outline, color: Colors.red),
+                  ),
+                  onDismissed: (_) => db.remindersDao.deleteReminder(r.id),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).cardTheme.color,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Theme.of(context).dividerColor),
+                    ),
+                    child: SwitchListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      value: r.isActive,
+                      activeColor: AppColors.primary,
+                      onChanged: (v) => db.remindersDao.setActive(r.id, v),
+                      title: Text(r.title, style: Theme.of(context).textTheme.titleMedium),
+                      subtitle: Row(
+                        children: [
+                          const Icon(Icons.access_time, size: 14, color: Colors.grey),
+                          const SizedBox(width: 4),
+                          Text(r.timeLabel, style: Theme.of(context).textTheme.bodySmall),
+                        ],
                       ),
-                      onDismissed: (_) => db.remindersDao.deleteReminder(r.id),
-                      child: Card(
-                        margin: const EdgeInsets.only(bottom: 10),
-                        child: SwitchListTile(
-                          value: r.isActive,
-                          activeColor: AppColors.primary,
-                          onChanged: (v) => db.remindersDao.setActive(r.id, v),
-                          title: Text(r.title, style: Theme.of(context).textTheme.titleSmall),
-                          subtitle: Text(r.timeLabel, style: Theme.of(context).textTheme.bodySmall),
-                          secondary: const Icon(Icons.notifications_active_outlined, color: AppColors.primary),
+                      secondary: Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          shape: BoxShape.circle,
                         ),
+                        child: const Icon(Icons.notifications_active_outlined, color: AppColors.primary, size: 20),
                       ),
-                    ))
-                .toList(),
+                    ),
+                  ),
+                ),
+              );
+            },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.notifications_off_outlined, size: 80, color: Colors.grey.withOpacity(0.2)),
+          const SizedBox(height: 16),
+          Text('لا توجد تذكيرات نشطة', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey)),
+          const SizedBox(height: 8),
+          Text('سوف تظهر التذكيرات المجدولة هنا', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+        ],
       ),
     );
   }

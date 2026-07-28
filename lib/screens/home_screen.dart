@@ -8,6 +8,7 @@ import '../core/database/tables.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/task_tile.dart';
 import '../widgets/quick_add_modal.dart';
+import '../widgets/reorderable_task_list.dart';
 import '../core/utils/sound_service.dart';
 import '../core/theme/app_colors.dart';
 
@@ -121,19 +122,9 @@ class HomeScreen extends StatelessWidget {
                 ],
               ),
               if (tasks.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  child: Center(child: Text('لا توجد مهام اليوم بعد', style: Theme.of(context).textTheme.bodyMedium)),
-                )
+                _buildEmptyState(context)
               else
-                ...tasks.take(4).map((t) => TaskTile(
-                      task: t,
-                      onTap: () => context.push('/task-details/${t.id}'),
-                      onCheck: (v) {
-                        if (v == true) SoundService.playTaskComplete(context);
-                        db.tasksDao.setStatus(t.id, v == true ? TaskStatus.completed : TaskStatus.pending);
-                      },
-                    )),
+                ReorderableTaskList(tasks: tasks.take(6).toList()),
               const SizedBox(height: 8),
               _quickAccessGrid(context),
               const SizedBox(height: 20),
@@ -191,6 +182,23 @@ class HomeScreen extends StatelessWidget {
             Text(value, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: color)),
             const SizedBox(height: 2),
             Text(label, style: Theme.of(context).textTheme.bodySmall),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 40),
+        child: Column(
+          children: [
+            Icon(Icons.task_alt, size: 64, color: Colors.grey.withOpacity(0.3)),
+            const SizedBox(height: 16),
+            Text('يومك هادئ.. لا توجد مهام حالياً', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey)),
+            const SizedBox(height: 8),
+            Text('اضغط + لإضافة أول مهمة', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
           ],
         ),
       ),

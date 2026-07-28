@@ -43,6 +43,17 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
   Future<int> softDelete(int id) =>
       (update(tasks)..where((t) => t.id.equals(id))).write(const TasksCompanion(isDeleted: Value(true)));
 
+  Stream<List<Task>> watchSubtasks(int parentId) {
+    return (select(tasks)
+          ..where((t) => t.parentTaskId.equals(parentId) & t.isDeleted.equals(false))
+          ..orderBy([(t) => OrderingTerm.asc(t.startMinutes)]))
+        .watch();
+  }
+
+  Future<int> insertSubtask(TasksCompanion entry, int parentId) {
+    return into(tasks).insert(entry.copyWith(parentTaskId: Value(parentId)));
+  }
+
   /// عدد المهام حسب الحالة، لبطاقات الإحصائيات السريعة في الرئيسية
   Future<Map<TaskStatus, int>> countByStatusForDate(DateTime date) async {
     final day = _dateOnly(date);

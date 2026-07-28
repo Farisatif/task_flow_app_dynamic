@@ -44,7 +44,7 @@ class FocusDashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           StreamBuilder<FocusStatistics>(
-            stream: db.statisticsDao.watchFocusStatisticsForToday(),
+            stream: db.statisticsDao.watchFocusStatisticsForDate(DateTime.now()),
             builder: (context, snapshot) {
               final stats = snapshot.data;
 
@@ -78,7 +78,7 @@ class FocusDashboardScreen extends StatelessWidget {
           Text('آخر جلسات التركيز', style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 12),
           StreamBuilder<FocusStatistics>(
-            stream: db.statisticsDao.watchFocusStatisticsForToday(),
+            stream: db.statisticsDao.watchFocusStatisticsForDate(DateTime.now()),
             builder: (context, snapshot) {
               final stats = snapshot.data;
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
+import 'package:drift/drift.dart' hide Column;
 import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../core/theme/app_colors.dart';
@@ -35,7 +36,7 @@ class TaskActionMenu extends StatelessWidget {
           Container(
             width: 40,
             height: 4,
-            margin: const EdgeInsets.bottom(20),
+            margin: const EdgeInsets.only(bottom: 20),
             decoration: BoxDecoration(
               color: Colors.grey.withOpacity(0.3),
               borderRadius: BorderRadius.circular(2),
@@ -72,8 +73,8 @@ class TaskActionMenu extends StatelessWidget {
                 endMinutes: task.endMinutes,
                 priority: task.priority,
                 status: const Value(TaskStatus.pending),
-                categoryId: Value(task.categoryId),
-                projectId: Value(task.projectId),
+                categoryId: Value.absentIfNull(task.categoryId),
+                projectId: Value.absentIfNull(task.projectId),
               ));
               if (context.mounted) Navigator.pop(context);
             },
