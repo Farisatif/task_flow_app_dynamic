@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:drift/drift.dart' as drift;
 import '../core/database/database.dart';
 import '../core/database/dao/projects_dao.dart';
-import '../core/database/tables.dart';
+
 import '../core/utils/icon_map.dart';
 import '../widgets/app_scaffold.dart';
 import '../core/theme/app_colors.dart';

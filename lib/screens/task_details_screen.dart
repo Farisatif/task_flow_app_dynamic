@@ -7,7 +7,7 @@ import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../core/utils/task_extensions.dart';
 import '../widgets/app_scaffold.dart';
-import '../core/theme/app_colors.dart';
+
 
 class TaskDetailsScreen extends StatelessWidget {
   final int taskId;

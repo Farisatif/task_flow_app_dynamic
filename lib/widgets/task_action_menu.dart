@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
-import 'package:drift/drift.dart' hide Column;
+import 'package:drift/drift.dart' as drift show Value;
 import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../core/theme/app_colors.dart';
@@ -72,9 +72,9 @@ class TaskActionMenu extends StatelessWidget {
                 startMinutes: task.startMinutes,
                 endMinutes: task.endMinutes,
                 priority: task.priority,
-                status: const Value(TaskStatus.pending),
-                categoryId: Value.absentIfNull(task.categoryId),
-                projectId: Value.absentIfNull(task.projectId),
+                status: const drift.Value(TaskStatus.pending),
+                categoryId: drift.Value.absentIfNull(task.categoryId),
+                projectId: drift.Value.absentIfNull(task.projectId),
               ));
               if (context.mounted) Navigator.pop(context);
             },

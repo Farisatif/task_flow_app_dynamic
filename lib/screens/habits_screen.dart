@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/database/database.dart';
-import '../core/database/tables.dart';
+
 import '../core/database/dao/habits_dao.dart';
 import '../core/utils/icon_map.dart';
 import '../widgets/app_scaffold.dart';

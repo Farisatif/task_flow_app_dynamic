@@ -235,8 +235,60 @@ class StatisticsDao extends DatabaseAccessor<AppDatabase> with _$StatisticsDaoMi
     final day = DateTime(today.year, today.month, today.day);
 
     return (select(tasks)
-          ..where((t) => t.date.isSmallerThanValue(day) & t.status.equalsExp(Constant(false))(TaskStatus.completed) & t.isDeleted.equals(false)))
+          ..where((t) =>
+              t.date.isSmallerThanValue(day) &
+              t.status.equals(TaskStatus.completed.index).not() &
+              t.isDeleted.equals(false)))
         .watch()
         .map((taskList) => taskList.length);
+  }
+
+  /// احصائيات المهام لتاريخ محدد
+  Stream<TaskStatistics> watchTaskStatisticsForDate(DateTime date) {
+    final day = DateTime(date.year, date.month, date.day);
+    final next = day.add(const Duration(days: 1));
+
+    return (select(tasks)
+          ..where((t) => t.date.isBiggerOrEqualValue(day) & t.date.isSmallerThanValue(next) & t.isDeleted.equals(false)))
+        .watch()
+        .map((taskList) {
+      final total = taskList.length;
+      final completed = taskList.where((t) => t.status == TaskStatus.completed).length;
+      final inProgress = taskList.where((t) => t.status == TaskStatus.inProgress).length;
+      final pending = taskList.where((t) => t.status == TaskStatus.pending).length;
+      final overdue = taskList.where((t) => t.date.isBefore(day) && t.status != TaskStatus.completed).length;
+
+      return TaskStatistics(
+        total: total,
+        completed: completed,
+        inProgress: inProgress,
+        pending: pending,
+        overdue: overdue,
+      );
+    });
+  }
+
+  /// احصائيات التركيز لتاريخ محدد
+  Stream<FocusStatistics> watchFocusStatisticsForDate(DateTime date) {
+    final day = DateTime(date.year, date.month, date.day);
+    final next = day.add(const Duration(days: 1));
+
+    return (select(focusSessions)
+          ..where((f) => f.startTime.isBiggerOrEqualValue(day) & f.startTime.isSmallerThanValue(next))
+          ..orderBy([(f) => OrderingTerm.asc(f.startTime)]))
+        .watch()
+        .map((sessions) {
+      final completedSessions = sessions.where((s) => s.isCompleted).toList();
+      final totalSeconds = completedSessions.fold<int>(0, (sum, s) => sum + s.durationSeconds);
+      final totalMinutes = totalSeconds ~/ 60;
+      final avgMinutes = completedSessions.isEmpty ? 0 : totalMinutes ~/ completedSessions.length;
+
+      return FocusStatistics(
+        sessionsCount: completedSessions.length,
+        totalMinutes: totalMinutes,
+        averageMinutesPerSession: avgMinutes,
+        sessions: sessions,
+      );
+    });
   }
 }

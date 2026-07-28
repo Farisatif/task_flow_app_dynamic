@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 import 'package:drift/drift.dart' show Value;
 import '../widgets/app_scaffold.dart';
@@ -11,7 +12,6 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final db = context.watch<AppDatabase>();
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AppScaffold(
       title: 'الملف الشخصي',
@@ -140,15 +140,7 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _stat(BuildContext context, String value, String label) {
-    return Column(
-      children: [
-        Text(value, style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppColors.primary)),
-        const SizedBox(height: 2),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-      ],
-    );
-  }
+
 
   void _showEditProfileDialog(BuildContext context, AppDatabase db, ProfileRow profile) {
     final nameController = TextEditingController(text: profile.name);

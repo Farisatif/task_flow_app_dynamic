@@ -6,10 +6,8 @@ import 'package:intl/intl.dart' as intl;
 import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../widgets/app_scaffold.dart';
-import '../widgets/task_tile.dart';
 import '../widgets/quick_add_modal.dart';
 import '../widgets/reorderable_task_list.dart';
-import '../core/utils/sound_service.dart';
 import '../core/theme/app_colors.dart';
 
 class HomeScreen extends StatelessWidget {

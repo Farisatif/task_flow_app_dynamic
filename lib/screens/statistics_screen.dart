@@ -125,7 +125,6 @@ class StatisticsScreen extends StatelessWidget {
 
                   final sections = categoryMap.entries.toList().asMap().entries.map((entry) {
                     final index = entry.key;
-                    final category = entry.value.key;
                     final count = entry.value.value;
                     final total = categoryMap.values.fold<int>(0, (sum, c) => sum + c);
                     final percentage = total == 0 ? 0.0 : (count / total) * 100;

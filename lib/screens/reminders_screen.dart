@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../core/database/database.dart';
-import '../core/database/tables.dart';
+
 import '../widgets/app_scaffold.dart';
 import '../core/theme/app_colors.dart';
 

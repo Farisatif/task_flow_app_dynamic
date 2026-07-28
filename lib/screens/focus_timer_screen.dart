@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:provider/provider.dart';
 import '../widgets/app_scaffold.dart';
-import '../core/theme/app_colors.dart';
+
 import '../core/utils/sound_service.dart';
 import '../core/utils/settings_provider.dart';
 
