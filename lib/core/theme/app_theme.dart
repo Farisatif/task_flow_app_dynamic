@@ -36,12 +36,12 @@ class AppTheme {
         error: AppColors.priorityHigh,
       ),
       textTheme: _textTheme(AppColors.lightTextPrimary, AppColors.lightTextSecondary),
-      cardTheme: CardTheme(
+      cardTheme: const CardThemeData(
         color: AppColors.lightCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppColors.lightBorder),
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+          side: BorderSide(color: AppColors.lightBorder),
         ),
       ),
       appBarTheme: const AppBarTheme(
@@ -74,12 +74,12 @@ class AppTheme {
         error: AppColors.priorityHigh,
       ),
       textTheme: _textTheme(AppColors.darkTextPrimary, AppColors.darkTextSecondary),
-      cardTheme: CardTheme(
+      cardTheme: const CardThemeData(
         color: AppColors.darkCard,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: AppColors.darkBorder),
+          borderRadius: BorderRadius.all(Radius.circular(20)),
+          side: BorderSide(color: AppColors.darkBorder),
         ),
       ),
       appBarTheme: const AppBarTheme(
