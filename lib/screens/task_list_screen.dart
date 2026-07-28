@@ -36,7 +36,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
           var tasks = snapshot.data ?? [];
           final now = DateTime.now();
           if (_filter == 'اليوم') {
-            tasks = tasks.where((t) => t.date.year == now.year && t.date.month == now.month && t.date.day == now.day).toList();
+            tasks = tasks.where((t) => isSameDay(t.date, now)).toList();
           } else if (_filter == 'الأسبوع') {
             final weekEnd = now.add(const Duration(days: 7));
             tasks = tasks.where((t) => t.date.isAfter(now.subtract(const Duration(days: 1))) && t.date.isBefore(weekEnd)).toList();
@@ -46,56 +46,87 @@ class _TaskListScreenState extends State<TaskListScreen> {
           final medium = tasks.where((t) => t.priority == TaskPriority.medium).toList();
           final low = tasks.where((t) => t.priority == TaskPriority.low).toList();
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
+          return Column(
             children: [
-              Row(
-                children: filters
-                    .map((f) => Padding(
-                          padding: const EdgeInsetsDirectional.only(end: 8),
-                          child: ChoiceChip(
-                            label: Text(f),
-                            selected: _filter == f,
-                            onSelected: (_) => setState(() => _filter = f),
-                          ),
-                        ))
-                    .toList(),
-              ),
-              const SizedBox(height: 16),
-              if (tasks.isEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
-                  child: Center(child: Text('لا توجد مهام مطابقة', style: Theme.of(context).textTheme.bodyMedium)),
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: filters
+                        .map((f) => Padding(
+                              padding: const EdgeInsetsDirectional.only(end: 8),
+                              child: ChoiceChip(
+                                label: Text(f),
+                                selected: _filter == f,
+                                onSelected: (_) => setState(() => _filter = f),
+                                selectedColor: AppColors.primary.withOpacity(0.2),
+                                labelStyle: TextStyle(color: _filter == f ? AppColors.primary : null, fontWeight: _filter == f ? FontWeight.bold : null),
+                              ),
+                            ))
+                        .toList(),
+                  ),
                 ),
-              if (high.isNotEmpty) ...[
-                _priorityHeader(context, 'الأولوية العالية', AppColors.priorityHigh),
-                ...high.map((t) => TaskTile(
-                      task: t,
-                      onTap: () => context.push('/task-details/${t.id}'),
-                      onCheck: (v) => db.tasksDao.setStatus(t.id, v == true ? TaskStatus.completed : TaskStatus.pending),
-                    )),
-              ],
-              if (medium.isNotEmpty) ...[
-                _priorityHeader(context, 'الأولوية المتوسطة', AppColors.priorityMedium),
-                ...medium.map((t) => TaskTile(
-                      task: t,
-                      onTap: () => context.push('/task-details/${t.id}'),
-                      onCheck: (v) => db.tasksDao.setStatus(t.id, v == true ? TaskStatus.completed : TaskStatus.pending),
-                    )),
-              ],
-              if (low.isNotEmpty) ...[
-                _priorityHeader(context, 'الأولوية المنخفضة', AppColors.priorityLow),
-                ...low.map((t) => TaskTile(
-                      task: t,
-                      onTap: () => context.push('/task-details/${t.id}'),
-                      onCheck: (v) => db.tasksDao.setStatus(t.id, v == true ? TaskStatus.completed : TaskStatus.pending),
-                    )),
-              ],
+              ),
+              Expanded(
+                child: tasks.isEmpty
+                    ? _buildEmptyState(context)
+                    : ListView(
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          if (high.isNotEmpty) ...[
+                            _priorityHeader(context, 'الأولوية العالية', AppColors.priorityHigh),
+                            ...high.map((t) => TaskTile(
+                                  task: t,
+                                  onTap: () => context.push('/task-details/${t.id}'),
+                                  onCheck: (v) => db.tasksDao.setStatus(t.id, v == true ? TaskStatus.completed : TaskStatus.pending),
+                                )),
+                            const SizedBox(height: 12),
+                          ],
+                          if (medium.isNotEmpty) ...[
+                            _priorityHeader(context, 'الأولوية المتوسطة', AppColors.priorityMedium),
+                            ...medium.map((t) => TaskTile(
+                                  task: t,
+                                  onTap: () => context.push('/task-details/${t.id}'),
+                                  onCheck: (v) => db.tasksDao.setStatus(t.id, v == true ? TaskStatus.completed : TaskStatus.pending),
+                                )),
+                            const SizedBox(height: 12),
+                          ],
+                          if (low.isNotEmpty) ...[
+                            _priorityHeader(context, 'الأولوية المنخفضة', AppColors.priorityLow),
+                            ...low.map((t) => TaskTile(
+                                  task: t,
+                                  onTap: () => context.push('/task-details/${t.id}'),
+                                  onCheck: (v) => db.tasksDao.setStatus(t.id, v == true ? TaskStatus.completed : TaskStatus.pending),
+                                )),
+                          ],
+                        ],
+                      ),
+              ),
             ],
           );
         },
       ),
     );
+  }
+
+  Widget _buildEmptyState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.assignment_outlined, size: 80, color: Colors.grey.withOpacity(0.2)),
+          const SizedBox(height: 16),
+          Text('لا توجد مهام هنا', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.grey)),
+          const SizedBox(height: 8),
+          Text('ابدأ بإضافة مهام جديدة لتنظيم يومك', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
+        ],
+      ),
+    );
+  }
+
+  bool isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
   }
 
   Widget _priorityHeader(BuildContext context, String label, Color color) {
