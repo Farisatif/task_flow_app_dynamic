@@ -6,6 +6,7 @@ class AppTheme {
   AppTheme._();
 
   static TextTheme _textTheme(Color primaryText, Color secondaryText) {
+    // We avoid using GoogleFonts as a const to prevent the FontWeight map constant evaluation error
     final base = GoogleFonts.tajawalTextTheme();
     return base.copyWith(
       displayLarge: base.displayLarge?.copyWith(color: primaryText, fontWeight: FontWeight.bold),
