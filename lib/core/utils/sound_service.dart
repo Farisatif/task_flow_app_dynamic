@@ -1,37 +1,36 @@
 import 'package:flutter/services.dart';
-import 'package:provider/provider.dart';
-import 'settings_provider.dart';
 import 'package:flutter/widgets.dart';
+import 'package:provider/provider.dart';
+
+import 'settings_provider.dart';
 
 class SoundService {
   SoundService._();
 
-  static void playTaskComplete(BuildContext context) {
+  static Future<void> playTaskComplete(BuildContext context) async {
     final settings = context.read<SettingsProvider>();
-    if (settings.soundEnabled) {
-      // In a real app, we would use a package like audioplayers
-      // For now, we simulate with system haptics if enabled
-      if (settings.hapticEnabled) {
-        HapticFeedback.mediumImpact();
-      }
+    if (!settings.soundEnabled) return;
+
+    if (settings.hapticEnabled) {
+      await HapticFeedback.mediumImpact();
     }
   }
 
-  static void playTaskCreate(BuildContext context) {
+  static Future<void> playTaskCreate(BuildContext context) async {
     final settings = context.read<SettingsProvider>();
-    if (settings.soundEnabled) {
-      if (settings.hapticEnabled) {
-        HapticFeedback.lightImpact();
-      }
+    if (!settings.soundEnabled) return;
+
+    if (settings.hapticEnabled) {
+      await HapticFeedback.lightImpact();
     }
   }
 
-  static void playNotification(BuildContext context) {
+  static Future<void> playNotification(BuildContext context) async {
     final settings = context.read<SettingsProvider>();
-    if (settings.soundEnabled) {
-      if (settings.hapticEnabled) {
-        HapticFeedback.heavyImpact();
-      }
+    if (!settings.soundEnabled) return;
+
+    if (settings.hapticEnabled) {
+      await HapticFeedback.heavyImpact();
     }
   }
 }
