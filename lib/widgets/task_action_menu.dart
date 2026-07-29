@@ -6,6 +6,8 @@ import 'package:provider/provider.dart';
 import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../core/theme/app_colors.dart';
+import '../core/utils/notification_service.dart';
+import '../core/utils/task_extensions.dart';
 
 class TaskActionMenu extends StatelessWidget {
   final Task task;
@@ -19,6 +21,16 @@ class TaskActionMenu extends StatelessWidget {
       backgroundColor: Colors.transparent,
       useSafeArea: true,
       builder: (sheetContext) => TaskActionMenu(task: task),
+    );
+  }
+
+  DateTime _taskReminderTime() {
+    return DateTime(
+      task.date.year,
+      task.date.month,
+      task.date.day,
+      task.startMinutes ~/ 60,
+      task.startMinutes % 60,
     );
   }
 
@@ -71,12 +83,25 @@ class TaskActionMenu extends StatelessWidget {
               label: isCompleted
                   ? 'إعادة تعيين كغير مكتملة'
                   : 'تحديد كمكتملة',
-              iconColor: isCompleted ? theme.iconTheme.color : AppColors.accentGreen,
+              iconColor:
+                  isCompleted ? theme.iconTheme.color : AppColors.accentGreen,
               onTap: () async {
                 await db.tasksDao.setStatus(
                   task.id,
                   isCompleted ? TaskStatus.pending : TaskStatus.completed,
                 );
+
+                if (isCompleted) {
+                  await NotificationService.scheduleTaskReminder(
+                    taskId: task.id,
+                    title: task.title,
+                    scheduledTime: _taskReminderTime(),
+                    body: 'من ${task.timeRange}',
+                  );
+                } else {
+                  await NotificationService.cancelReminder(task.id);
+                }
+
                 if (context.mounted) Navigator.of(context).pop();
               },
             ),
@@ -84,7 +109,7 @@ class TaskActionMenu extends StatelessWidget {
               icon: Icons.copy_outlined,
               label: 'تكرار المهمة',
               onTap: () async {
-                await db.tasksDao.insertTask(
+                final newTaskId = await db.tasksDao.insertTask(
                   TasksCompanion.insert(
                     title: '${task.title} (نسخة)',
                     date: task.date,
@@ -98,6 +123,13 @@ class TaskActionMenu extends StatelessWidget {
                     createdAt: drift.Value(DateTime.now()),
                     updatedAt: drift.Value(DateTime.now()),
                   ),
+                );
+
+                await NotificationService.scheduleTaskReminder(
+                  taskId: newTaskId,
+                  title: '${task.title} (نسخة)',
+                  scheduledTime: _taskReminderTime(),
+                  body: 'من ${task.timeRange}',
                 );
 
                 if (context.mounted) Navigator.of(context).pop();
@@ -130,8 +162,7 @@ class TaskActionMenu extends StatelessWidget {
                         style: FilledButton.styleFrom(
                           backgroundColor: AppColors.priorityHigh,
                         ),
-                        onPressed: () =>
-                            Navigator.of(dialogContext).pop(true),
+                        onPressed: () => Navigator.of(dialogContext).pop(true),
                         child: const Text('حذف'),
                       ),
                     ],
@@ -139,6 +170,7 @@ class TaskActionMenu extends StatelessWidget {
                 );
 
                 if (confirmed == true) {
+                  await NotificationService.cancelReminder(task.id);
                   await db.tasksDao.softDelete(task.id);
                   if (context.mounted) Navigator.of(context).pop();
                 }
