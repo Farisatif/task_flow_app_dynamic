@@ -12,6 +12,8 @@ extension TaskUiExtensions on Task {
         return const Color(0xFFFFB258);
       case TaskPriority.low:
         return const Color(0xFF4CD787);
+      default:
+        return const Color(0xFF4CD787);
     }
   }
 
@@ -23,6 +25,8 @@ extension TaskUiExtensions on Task {
         return 'متوسطة';
       case TaskPriority.low:
         return 'منخفضة';
+      default:
+        return 'متوسطة';
     }
   }
 
@@ -33,6 +37,8 @@ extension TaskUiExtensions on Task {
       case TaskStatus.inProgress:
         return 'جارية';
       case TaskStatus.pending:
+        return 'منتظرة';
+      default:
         return 'منتظرة';
     }
   }
