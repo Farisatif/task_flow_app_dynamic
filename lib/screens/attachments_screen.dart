@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart' as intl;
 import 'package:provider/provider.dart';
@@ -7,8 +8,8 @@ import '../core/database/tables.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/app_scaffold.dart';
 
-IconData _kindIcon(AttachmentKind k) {
-  switch (k) {
+IconData _kindIcon(AttachmentKind kind) {
+  switch (kind) {
     case AttachmentKind.image:
       return Icons.image_outlined;
     case AttachmentKind.pdf:
@@ -24,8 +25,8 @@ IconData _kindIcon(AttachmentKind k) {
   }
 }
 
-Color _kindColor(AttachmentKind k) {
-  switch (k) {
+Color _kindColor(AttachmentKind kind) {
+  switch (kind) {
     case AttachmentKind.image:
       return const Color(0xFF5B9DF9);
     case AttachmentKind.pdf:
@@ -41,8 +42,8 @@ Color _kindColor(AttachmentKind k) {
   }
 }
 
-String _kindLabel(AttachmentKind k) {
-  switch (k) {
+String _kindLabel(AttachmentKind kind) {
+  switch (kind) {
     case AttachmentKind.image:
       return 'صورة';
     case AttachmentKind.pdf:
@@ -60,8 +61,52 @@ String _kindLabel(AttachmentKind k) {
 
 String _sizeLabel(int bytes) {
   if (bytes <= 0) return '-';
-  if (bytes < 1024 * 1024) return '${(bytes / 1024).toStringAsFixed(0)} KB';
+  if (bytes < 1024 * 1024) {
+    return '${(bytes / 1024).toStringAsFixed(0)} KB';
+  }
   return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+}
+
+enum _AttachmentFilter { all, image, pdf, text, doc, chart, presentation }
+
+extension on _AttachmentFilter {
+  String get label {
+    switch (this) {
+      case _AttachmentFilter.all:
+        return 'الكل';
+      case _AttachmentFilter.image:
+        return 'صور';
+      case _AttachmentFilter.pdf:
+        return 'PDF';
+      case _AttachmentFilter.text:
+        return 'نصوص';
+      case _AttachmentFilter.doc:
+        return 'مستندات';
+      case _AttachmentFilter.chart:
+        return 'رسوم';
+      case _AttachmentFilter.presentation:
+        return 'عروض';
+    }
+  }
+
+  AttachmentKind? get kind {
+    switch (this) {
+      case _AttachmentFilter.all:
+        return null;
+      case _AttachmentFilter.image:
+        return AttachmentKind.image;
+      case _AttachmentFilter.pdf:
+        return AttachmentKind.pdf;
+      case _AttachmentFilter.text:
+        return AttachmentKind.text;
+      case _AttachmentFilter.doc:
+        return AttachmentKind.doc;
+      case _AttachmentFilter.chart:
+        return AttachmentKind.chart;
+      case _AttachmentFilter.presentation:
+        return AttachmentKind.presentation;
+    }
+  }
 }
 
 class AttachmentsScreen extends StatefulWidget {
@@ -72,7 +117,277 @@ class AttachmentsScreen extends StatefulWidget {
 }
 
 class _AttachmentsScreenState extends State<AttachmentsScreen> {
-  AttachmentKind? _filterKind;
+  final TextEditingController _searchController = TextEditingController();
+  _AttachmentFilter _filter = _AttachmentFilter.all;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Attachment> _applyFilters(List<Attachment> attachments) {
+    final query = _searchController.text.trim().toLowerCase();
+    final selectedKind = _filter.kind;
+
+    return attachments.where((attachment) {
+      final matchesQuery = query.isEmpty ||
+          attachment.name.toLowerCase().contains(query);
+
+      final matchesKind =
+          selectedKind == null ? true : attachment.kind == selectedKind;
+
+      return matchesQuery && matchesKind;
+    }).toList();
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    AppDatabase db,
+    Attachment attachment,
+  ) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text('حذف المرفق'),
+        content: Text('هل تريد حذف "${attachment.name}"؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('إلغاء'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.priorityHigh,
+            ),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      await db.attachmentsDao.deleteAttachment(attachment.id);
+    }
+  }
+
+  Future<void> _showAddSheet(BuildContext context, AppDatabase db) async {
+    final nameController = TextEditingController();
+    final sizeController = TextEditingController(text: '0');
+    AttachmentKind selectedKind = AttachmentKind.doc;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      useSafeArea: true,
+      builder: (sheetContext) {
+        return StatefulBuilder(
+          builder: (context, setSheetState) {
+            final theme = Theme.of(context);
+            final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+
+            return Container(
+              padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomPadding),
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 42,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: theme.dividerColor.withOpacity(0.35),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Container(
+                          width: 48,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withOpacity(0.12),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: const Icon(
+                            Icons.upload_file_rounded,
+                            color: AppColors.primary,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'إضافة مرفق',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'أضف ملفًا جديدًا وحدد نوعه بسرعة',
+                                style: theme.textTheme.bodyMedium,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 18),
+                    TextField(
+                      controller: nameController,
+                      autofocus: true,
+                      textInputAction: TextInputAction.done,
+                      decoration: InputDecoration(
+                        labelText: 'اسم الملف',
+                        hintText: 'مثال: خطة المشروع النهائية',
+                        filled: true,
+                        fillColor: theme.colorScheme.surfaceContainerHighest
+                            .withOpacity(0.35),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<AttachmentKind>(
+                      value: selectedKind,
+                      decoration: InputDecoration(
+                        labelText: 'نوع الملف',
+                        filled: true,
+                        fillColor: theme.colorScheme.surfaceContainerHighest
+                            .withOpacity(0.35),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                      items: AttachmentKind.values
+                          .map(
+                            (kind) => DropdownMenuItem(
+                              value: kind,
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    _kindIcon(kind),
+                                    size: 18,
+                                    color: _kindColor(kind),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(_kindLabel(kind)),
+                                ],
+                              ),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value == null) return;
+                        setSheetState(() => selectedKind = value);
+                      },
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: sizeController,
+                      keyboardType: TextInputType.number,
+                      decoration: InputDecoration(
+                        labelText: 'الحجم بالبايت',
+                        hintText: 'مثال: 2048',
+                        filled: true,
+                        fillColor: theme.colorScheme.surfaceContainerHighest
+                            .withOpacity(0.35),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    _PreviewCard(
+                      name: nameController.text.trim().isEmpty
+                          ? 'معاينة الملف'
+                          : nameController.text.trim(),
+                      kind: selectedKind,
+                    ),
+                    const SizedBox(height: 18),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.of(sheetContext).pop(),
+                            style: OutlinedButton.styleFrom(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Text('إلغاء'),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: () async {
+                              final name = nameController.text.trim();
+                              final size =
+                                  int.tryParse(sizeController.text.trim()) ?? 0;
+
+                              if (name.isEmpty) return;
+
+                              await db.attachmentsDao.insertAttachment(
+                                AttachmentsCompanion.insert(
+                                  name: name,
+                                  kind: selectedKind,
+                                  sizeBytes: Value(size),
+                                ),
+                              );
+
+                              if (!mounted) return;
+                              Navigator.of(sheetContext).pop();
+                            },
+                            style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: const Text('إضافة'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+
+    nameController.dispose();
+    sizeController.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -84,10 +399,10 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
       showNav: false,
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
-        onPressed: () => _showAddDialog(context, db),
-        icon: const Icon(Icons.upload_file, color: Colors.white),
+        onPressed: () => _showAddSheet(context, db),
+        icon: const Icon(Icons.upload_file_rounded, color: Colors.white),
         label: const Text(
-          'إضافة',
+          'مرفق جديد',
           style: TextStyle(color: Colors.white),
         ),
       ),
@@ -103,14 +418,13 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
             );
           }
 
-          final attachments = (snapshot.data ?? [])
-              .where((a) => _filterKind == null || a.kind == _filterKind)
-              .toList()
+          final allAttachments = snapshot.data ?? [];
+          final attachments = _applyFilters(allAttachments)
             ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-          final allAttachments = snapshot.data ?? [];
           final totalCount = allAttachments.length;
-          final totalSize = allAttachments.fold<int>(0, (sum, a) => sum + a.sizeBytes);
+          final totalSize =
+              allAttachments.fold<int>(0, (sum, a) => sum + a.sizeBytes);
           final latestDate = allAttachments.isEmpty
               ? null
               : allAttachments
@@ -133,7 +447,6 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
                     : intl.DateFormat('d MMM yyyy', 'ar').format(latestDate),
               ),
               const SizedBox(height: 16),
-
               GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,
@@ -170,7 +483,6 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 18),
               _SectionTitle(
                 title: 'تصفية سريعة',
@@ -185,18 +497,18 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
                   separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     if (index == 0) {
-                      final selected = _filterKind == null;
+                      final selected = _filter == _AttachmentFilter.all;
                       return ChoiceChip(
                         label: const Text('الكل'),
                         selected: selected,
                         onSelected: (_) {
-                          setState(() => _filterKind = null);
+                          setState(() => _filter = _AttachmentFilter.all);
                         },
                       );
                     }
 
                     final kind = AttachmentKind.values[index - 1];
-                    final selected = _filterKind == kind;
+                    final selected = _filter.kind == kind;
                     final count = kindCounts[kind] ?? 0;
 
                     return ChoiceChip(
@@ -213,28 +525,36 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
                         fontWeight: FontWeight.w600,
                       ),
                       onSelected: (_) {
-                        setState(() => _filterKind = kind);
+                        setState(() {
+                          _filter = switch (kind) {
+                            AttachmentKind.image => _AttachmentFilter.image,
+                            AttachmentKind.pdf => _AttachmentFilter.pdf,
+                            AttachmentKind.text => _AttachmentFilter.text,
+                            AttachmentKind.doc => _AttachmentFilter.doc,
+                            AttachmentKind.chart => _AttachmentFilter.chart,
+                            AttachmentKind.presentation =>
+                              _AttachmentFilter.presentation,
+                          };
+                        });
                       },
                     );
                   },
                 ),
               ),
-
               const SizedBox(height: 18),
               _SectionTitle(
                 title: 'قائمة المرفقات',
                 subtitle: 'آخر الملفات المضافة',
               ),
               const SizedBox(height: 10),
-
               if (attachments.isEmpty)
                 _EmptyState(
-                  onAdd: () => _showAddDialog(context, db),
-                  filterKind: _filterKind,
+                  onAdd: () => _showAddSheet(context, db),
+                  filterKind: _filter.kind,
                 )
               else
                 ...attachments.map(
-                  (a) => Card(
+                  (attachment) => Card(
                     margin: const EdgeInsets.only(bottom: 10),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -242,7 +562,7 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
                     ),
                     child: InkWell(
                       borderRadius: BorderRadius.circular(18),
-                      onTap: () => _showDetailsSheet(context, a),
+                      onTap: () => _showDetailsSheet(context, attachment),
                       child: ListTile(
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 14,
@@ -251,16 +571,17 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
                         leading: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: _kindColor(a.kind).withOpacity(0.14),
+                            color: _kindColor(attachment.kind)
+                                .withOpacity(0.14),
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
-                            _kindIcon(a.kind),
-                            color: _kindColor(a.kind),
+                            _kindIcon(attachment.kind),
+                            color: _kindColor(attachment.kind),
                           ),
                         ),
                         title: Text(
-                          a.name,
+                          attachment.name,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                           ),
@@ -268,7 +589,7 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
                         subtitle: Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
-                            '${_kindLabel(a.kind)} · ${_sizeLabel(a.sizeBytes)} · ${intl.DateFormat('d MMM yyyy', 'ar').format(a.createdAt)}',
+                            '${_kindLabel(attachment.kind)} · ${_sizeLabel(attachment.sizeBytes)} · ${intl.DateFormat('d MMM yyyy', 'ar').format(attachment.createdAt)}',
                             style: theme.textTheme.bodySmall,
                           ),
                         ),
@@ -277,7 +598,11 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
                             Icons.delete_outline_rounded,
                             color: AppColors.priorityHigh,
                           ),
-                          onPressed: () => _confirmDelete(context, db, a),
+                          onPressed: () => _confirmDelete(
+                            context,
+                            db,
+                            attachment,
+                          ),
                         ),
                       ),
                     ),
@@ -290,132 +615,17 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
     );
   }
 
-  void _showAddDialog(BuildContext context, AppDatabase db) {
-    final nameController = TextEditingController();
-    final sizeController = TextEditingController(text: '0');
-    AttachmentKind kind = AttachmentKind.doc;
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          title: const Text('إضافة مرفق'),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextField(
-                  controller: nameController,
-                  autofocus: true,
-                  decoration: const InputDecoration(
-                    labelText: 'اسم الملف',
-                    prefixIcon: Icon(Icons.drive_file_rename_outline),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                DropdownButtonFormField<AttachmentKind>(
-                  value: kind,
-                  decoration: const InputDecoration(
-                    labelText: 'نوع الملف',
-                    prefixIcon: Icon(Icons.category_outlined),
-                  ),
-                  items: AttachmentKind.values
-                      .map(
-                        (k) => DropdownMenuItem(
-                          value: k,
-                          child: Text(_kindLabel(k)),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setDialogState(() => kind = v ?? kind),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: sizeController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'الحجم بالبايت',
-                    prefixIcon: Icon(Icons.storage_outlined),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('إلغاء'),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final name = nameController.text.trim();
-                final size = int.tryParse(sizeController.text.trim()) ?? 0;
-
-                if (name.isEmpty) return;
-
-                await db.attachmentsDao.insertAttachment(
-                  AttachmentsCompanion.insert(
-                    name: name,
-                    kind: kind,
-                    sizeBytes: size,
-                  ),
-                );
-
-                if (dialogContext.mounted) {
-                  Navigator.of(dialogContext).pop();
-                }
-              },
-              child: const Text('إضافة'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _confirmDelete(BuildContext context, AppDatabase db, Attachment a) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: const Text('حذف المرفق'),
-        content: Text('هل تريد حذف "${a.name}"؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('إلغاء'),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.priorityHigh,
-            ),
-            onPressed: () async {
-              await db.attachmentsDao.deleteAttachment(a.id);
-              if (dialogContext.mounted) {
-                Navigator.of(dialogContext).pop();
-              }
-            },
-            child: const Text('حذف'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showDetailsSheet(BuildContext context, Attachment a) {
-    showModalBottomSheet(
+  void _showDetailsSheet(BuildContext context, Attachment attachment) {
+    showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      builder: (context) {
+      builder: (sheetContext) {
+        final theme = Theme.of(sheetContext);
+        final color = _kindColor(attachment.kind);
+
         return Padding(
           padding: const EdgeInsets.all(20),
           child: Column(
@@ -427,10 +637,10 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: _kindColor(a.kind).withOpacity(0.14),
+                      color: color.withOpacity(0.14),
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Icon(_kindIcon(a.kind), color: _kindColor(a.kind)),
+                    child: Icon(_kindIcon(attachment.kind), color: color),
                   ),
                   const SizedBox(width: 14),
                   Expanded(
@@ -438,15 +648,15 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          a.name,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
+                          attachment.name,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          _kindLabel(a.kind),
-                          style: Theme.of(context).textTheme.bodySmall,
+                          _kindLabel(attachment.kind),
+                          style: theme.textTheme.bodySmall,
                         ),
                       ],
                     ),
@@ -454,24 +664,28 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
                 ],
               ),
               const SizedBox(height: 18),
-              _detailRow(
-                context,
-                'الحجم',
-                _sizeLabel(a.sizeBytes),
-              ),
+              _detailRow(sheetContext, 'الحجم', _sizeLabel(attachment.sizeBytes)),
               const SizedBox(height: 8),
               _detailRow(
-                context,
+                sheetContext,
                 'تاريخ الإنشاء',
-                intl.DateFormat('d MMMM yyyy', 'ar').format(a.createdAt),
+                intl.DateFormat('d MMMM yyyy', 'ar')
+                    .format(attachment.createdAt),
               ),
               const SizedBox(height: 8),
-              _detailRow(
-                context,
-                'النوع',
-                _kindLabel(a.kind),
+              _detailRow(sheetContext, 'النوع', _kindLabel(attachment.kind)),
+              const SizedBox(height: 18),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => Navigator.of(sheetContext).pop(),
+                      icon: const Icon(Icons.close_rounded),
+                      label: const Text('إغلاق'),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 12),
             ],
           ),
         );
@@ -480,24 +694,33 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
   }
 
   Widget _detailRow(BuildContext context, String label, String value) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.08)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+          Text(
+            value,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
                 ),
           ),
-        ),
-        Text(
-          value,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w700,
-              ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -515,6 +738,8 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -548,9 +773,8 @@ class _HeroCard extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             'أدر ملفاتك، استعرضها بسرعة، وتابع حجمها وتاريخها من مكان واحد.',
-            style: TextStyle(
+            style: theme.textTheme.bodyMedium?.copyWith(
               color: Colors.white.withOpacity(0.9),
-              fontSize: 13,
             ),
           ),
           const SizedBox(height: 16),
@@ -735,48 +959,45 @@ class _EmptyState extends StatelessWidget {
   Widget build(BuildContext context) {
     final isFiltered = filterKind != null;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 28),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 88,
-              height: 88,
-              decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: const Icon(
-                Icons.folder_open_rounded,
-                size: 42,
-                color: AppColors.primary,
-              ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 28),
+      child: Column(
+        children: [
+          Container(
+            width: 88,
+            height: 88,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(24),
             ),
-            const SizedBox(height: 14),
-            Text(
-              isFiltered ? 'لا توجد مرفقات لهذا النوع' : 'لا توجد مرفقات بعد',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+            child: const Icon(
+              Icons.folder_open_rounded,
+              size: 42,
+              color: AppColors.primary,
             ),
-            const SizedBox(height: 6),
-            Text(
-              isFiltered
-                  ? 'جرّب اختيار نوع آخر أو أضف مرفقًا جديدًا.'
-                  : 'ابدأ برفع أول ملف لتنظيم مكتبتك.',
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 18),
-            FilledButton.icon(
-              onPressed: onAdd,
-              icon: const Icon(Icons.add_rounded),
-              label: const Text('إضافة مرفق'),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            isFiltered ? 'لا توجد مرفقات لهذا النوع' : 'لا توجد مرفقات بعد',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            isFiltered
+                ? 'جرّب اختيار نوع آخر أو أضف مرفقًا جديدًا.'
+                : 'ابدأ برفع أول ملف لتنظيم مكتبتك.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 18),
+          FilledButton.icon(
+            onPressed: onAdd,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('إضافة مرفق'),
+          ),
+        ],
       ),
     );
   }
