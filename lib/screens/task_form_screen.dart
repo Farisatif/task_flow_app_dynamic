@@ -151,8 +151,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
 
     try {
       final reminderTime = _taskReminderTime();
-      final reminderBody =
-          'من ${_formatTime(_start)} إلى ${_formatTime(_end)}';
+      final reminderBody = 'من ${_formatTime(_start)} إلى ${_formatTime(_end)}';
 
       if (widget.isEditing) {
         final existing = await db.tasksDao.watchById(widget.taskId!).first;
@@ -168,8 +167,8 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
               startMinutes: startMin,
               endMinutes: endMin,
               priority: _priority,
-              categoryId: _categoryId,
-              projectId: _projectId,
+              categoryId: Value(_categoryId),
+              projectId: Value(_projectId),
               updatedAt: DateTime.now(),
             ),
           );
