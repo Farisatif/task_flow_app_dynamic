@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../database/tables.dart';
 import 'time_utils.dart';
-import '../database/database.dart';
+
 extension TaskUiExtensions on Task {
   Color priorityColor() {
     switch (priority) {
@@ -24,6 +25,21 @@ extension TaskUiExtensions on Task {
         return 'منخفضة';
     }
   }
+
+  String statusLabel() {
+    switch (status) {
+      case TaskStatus.completed:
+        return 'مكتملة';
+      case TaskStatus.inProgress:
+        return 'جارية';
+      case TaskStatus.pending:
+        return 'منتظرة';
+    }
+  }
+
+  bool get isDone => status == TaskStatus.completed;
+  bool get isInProgress => status == TaskStatus.inProgress;
+  bool get isPending => status == TaskStatus.pending;
 
   String get timeRange => TimeUtils.rangeLabel(startMinutes, endMinutes);
 }
