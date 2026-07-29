@@ -25,6 +25,10 @@ dependencies:
   path_provider: ^2.1.2
   path: ^1.8.3
 
+  flutter_local_notifications: ^18.0.1
+  flutter_timezone: ^3.0.1
+  timezone: ^0.10.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -38,9 +42,6 @@ flutter:
   assets:
     - assets/icon/
 
-# إعداد أيقونة التطبيق: بعد flutter pub get شغّل
-#   dart run flutter_launcher_icons
-# لتوليد أيقونات كل المنصات من الصورة أدناه (استبدلها بشعارك الخاص قبل النشر)
 flutter_launcher_icons:
   android: true
   ios: true
