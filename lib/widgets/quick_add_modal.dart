@@ -44,12 +44,18 @@ class _QuickAddModalState extends State<QuickAddModal> {
     _date = DateUtils.dateOnly(now);
     _startTime = TimeOfDay.fromDateTime(now);
     _endTime = _addHours(_startTime, 1);
+    _titleController.addListener(_onTitleChanged);
   }
 
   @override
   void dispose() {
+    _titleController.removeListener(_onTitleChanged);
     _titleController.dispose();
     super.dispose();
+  }
+
+  void _onTitleChanged() {
+    if (mounted) setState(() {});
   }
 
   TimeOfDay _addHours(TimeOfDay time, int hours) {
@@ -98,7 +104,7 @@ class _QuickAddModalState extends State<QuickAddModal> {
         ),
       );
 
-      await SoundService.playTaskCreate(context);
+      SoundService.playTaskCreate(context);
 
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -336,7 +342,8 @@ class _QuickAddModalState extends State<QuickAddModal> {
                   title: _titleController.text.trim().isEmpty
                       ? 'معاينة المهمة'
                       : _titleController.text.trim(),
-                  dateLabel: intl.DateFormat('EEEE، d MMMM', 'ar').format(_date),
+                  dateLabel:
+                      intl.DateFormat('EEEE، d MMMM', 'ar').format(_date),
                   timeLabel:
                       '${TimeUtils.formatMinutes(TimeUtils.toMinutes(_startTime))} - ${TimeUtils.formatMinutes(TimeUtils.toMinutes(_endTime))}',
                   priorityLabel: _priorityLabel(_priority),
@@ -458,7 +465,8 @@ class _ActionChip extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            color: isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade100,
+            color:
+                isDark ? Colors.white.withOpacity(0.06) : Colors.grey.shade100,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: color?.withOpacity(0.28) ??
@@ -507,7 +515,6 @@ class _CategoryPicker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final db = context.watch<AppDatabase>();
-    final theme = Theme.of(context);
 
     return StreamBuilder<List<Category>>(
       stream: db.categoriesDao.watchAll(),
@@ -617,7 +624,9 @@ class _PreviewCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: priorityColor.withOpacity(theme.brightness == Brightness.dark ? 0.12 : 0.08),
+        color: priorityColor.withOpacity(
+          theme.brightness == Brightness.dark ? 0.12 : 0.08,
+        ),
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: priorityColor.withOpacity(0.18)),
       ),
