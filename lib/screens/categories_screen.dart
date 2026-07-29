@@ -44,8 +44,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
             );
           }
 
-          final categories = (categoriesSnapshot.data ?? [])
-              .toList(growable: false);
+          final categories =
+              (categoriesSnapshot.data ?? []).toList(growable: false);
 
           return StreamBuilder<List<Task>>(
             stream: db.tasksDao.watchAll(),
@@ -94,7 +94,6 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                     categoriesWithTasks: categoriesWithTasks,
                   ),
                   const SizedBox(height: 16),
-
                   GridView.count(
                     crossAxisCount: 2,
                     shrinkWrap: true,
@@ -129,14 +128,12 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                       ),
                     ],
                   ),
-
                   const SizedBox(height: 18),
                   _SectionTitle(
                     title: 'البحث السريع',
                     subtitle: 'ابحث داخل أسماء التصنيفات',
                   ),
                   const SizedBox(height: 10),
-
                   TextField(
                     onChanged: (value) {
                       setState(() => _searchQuery = value);
@@ -154,16 +151,20 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide(color: theme.dividerColor),
                       ),
+                      suffixIcon: _searchQuery.trim().isEmpty
+                          ? null
+                          : IconButton(
+                              onPressed: () => setState(() => _searchQuery = ''),
+                              icon: const Icon(Icons.close_rounded),
+                            ),
                     ),
                   ),
-
                   const SizedBox(height: 18),
                   _SectionTitle(
                     title: 'قائمة التصنيفات',
                     subtitle: 'اضغط على أي تصنيف لعرض التفاصيل',
                   ),
                   const SizedBox(height: 10),
-
                   if (filteredCategories.isEmpty)
                     _EmptyState(
                       hasSearch: _searchQuery.trim().isNotEmpty,
@@ -209,7 +210,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                                 const SizedBox(width: 14),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         category.name,
@@ -277,7 +279,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
     }
   }
 
-  Future<void> _showAddCategoryDialog(BuildContext context, AppDatabase db) async {
+  Future<void> _showAddCategoryDialog(
+    BuildContext context,
+    AppDatabase db,
+  ) async {
     final nameController = TextEditingController();
     Color selectedColor = AppColors.primary;
 
@@ -324,7 +329,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                   children: colors.map((color) {
                     final isSelected = selectedColor.value == color.value;
                     return GestureDetector(
-                      onTap: () => setDialogState(() => selectedColor = color),
+                      onTap: () =>
+                          setDialogState(() => selectedColor = color),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 180),
                         width: 48,
@@ -347,7 +353,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                           ],
                         ),
                         child: isSelected
-                            ? const Icon(Icons.check_rounded, color: Colors.white)
+                            ? const Icon(
+                                Icons.check_rounded,
+                                color: Colors.white,
+                              )
                             : null,
                       ),
                     );
@@ -383,6 +392,8 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
         ),
       ),
     );
+
+    nameController.dispose();
   }
 
   Future<void> _showCategoryDetailsDialog(
@@ -426,7 +437,10 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                       children: [
                         Text(
                           category.name,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(
                                 fontWeight: FontWeight.w800,
                               ),
                         ),
@@ -443,7 +457,18 @@ class _CategoriesScreenState extends State<CategoriesScreen> {
                 ],
               ),
               const SizedBox(height: 18),
-              _detailRow(context, 'اللون', color),
+              _detailRow(
+                context,
+                'اللون',
+                Container(
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
               const SizedBox(height: 10),
               _detailRow(
                 context,
@@ -559,8 +584,9 @@ class _HeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final percentage =
-        totalCategories == 0 ? 0 : ((categoriesWithTasks / totalCategories) * 100).round();
+    final percentage = totalCategories == 0
+        ? 0
+        : ((categoriesWithTasks / totalCategories) * 100).round();
 
     return Container(
       width: double.infinity,
