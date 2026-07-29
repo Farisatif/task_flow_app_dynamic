@@ -120,7 +120,7 @@ class HomeScreen extends StatelessWidget {
                         : 'أنجزت $completed من أصل $total مهمة اليوم. ${
                             upcoming == null
                                 ? 'لا توجد مهمة قادمة الآن.'
-                                : 'المهمة القادمة: ${upcoming.title} عند ${_formatMinutes(upcoming.startMinutes)}.'
+                                : 'المهمة القادمة: ${upcoming.title} عند ${HomeScreen._formatMinutes(upcoming.startMinutes)}.'
                           }',
                     icon: Icons.auto_graph_rounded,
                     color: AppColors.primary,
@@ -186,10 +186,10 @@ class HomeScreen extends StatelessWidget {
 
   static Task? _nextTask(List<Task> tasks) {
     if (tasks.isEmpty) return null;
-    final nowMinutes =
-        TimeOfDay.now().hour * 60 + TimeOfDay.now().minute;
+    final nowMinutes = TimeOfDay.now().hour * 60 + TimeOfDay.now().minute;
 
-    final sorted = [...tasks]..sort((a, b) => a.startMinutes.compareTo(b.startMinutes));
+    final sorted = [...tasks]
+      ..sort((a, b) => a.startMinutes.compareTo(b.startMinutes));
 
     for (final task in sorted) {
       if (task.startMinutes >= nowMinutes) return task;
@@ -357,7 +357,7 @@ class _HeroCard extends StatelessWidget {
                     Text(
                       upcoming == null
                           ? 'لا توجد مهمة قادمة الآن'
-                          : 'المهمة القادمة: ${upcoming!.title} • ${_formatMinutes(upcoming!.startMinutes)}',
+                          : 'المهمة القادمة: ${upcoming!.title} • ${HomeScreen._formatMinutes(upcoming!.startMinutes)}',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: Colors.white70,
                       ),
