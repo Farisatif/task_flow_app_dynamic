@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
 import '../database/database.dart';
 import '../database/tables.dart';
 
@@ -54,7 +55,7 @@ class SmartNotification {
     String? route,
   }) {
     return SmartNotification(
-      id: 'due_soon_$taskId_${scheduledAt.millisecondsSinceEpoch}',
+      id: 'due_soon_${taskId}_${scheduledAt.millisecondsSinceEpoch}',
       type: SmartNotificationType.taskDueSoon,
       priority: SmartNotificationPriority.high,
       title: 'المهمة تقترب من موعدها',
@@ -74,7 +75,7 @@ class SmartNotification {
     String? route,
   }) {
     return SmartNotification(
-      id: 'start_soon_$taskId_${scheduledAt.millisecondsSinceEpoch}',
+      id: 'start_soon_${taskId}_${scheduledAt.millisecondsSinceEpoch}',
       type: SmartNotificationType.taskStartingSoon,
       priority: SmartNotificationPriority.medium,
       title: 'موعد المهمة يقترب',
@@ -94,7 +95,7 @@ class SmartNotification {
     String? route,
   }) {
     return SmartNotification(
-      id: 'overdue_$taskId_${scheduledAt.millisecondsSinceEpoch}',
+      id: 'overdue_${taskId}_${scheduledAt.millisecondsSinceEpoch}',
       type: SmartNotificationType.taskOverdue,
       priority: SmartNotificationPriority.urgent,
       title: 'مهمة متأخرة',
@@ -295,9 +296,8 @@ class SmartNotificationEngine {
         ),
       );
     } else if (current.hour <= 9 && todayTasks.isNotEmpty) {
-      final upcoming = todayTasks
-          .where((t) => t.status != TaskStatus.completed)
-          .length;
+      final upcoming =
+          todayTasks.where((t) => t.status != TaskStatus.completed).length;
 
       notifications.add(
         SmartNotification.morningPlan(
@@ -348,9 +348,12 @@ class SmartNotificationEngine {
 class NotificationService {
   NotificationService._();
 
-  static Future<void> initialize() async {
+  static Future<void> initialize({ValueChanged<String?>? onTap}) async {
     if (kDebugMode) {
       debugPrint('NotificationService initialized');
+    }
+    if (onTap != null && kDebugMode) {
+      debugPrint('Notification tap callback registered');
     }
   }
 
