@@ -18,6 +18,11 @@ class FocusSessionsDao extends DatabaseAccessor<AppDatabase> with _$FocusSession
         .watch();
   }
 
+  /// يبث كل جلسات التركيز (لتحليلها إحصائيًا في شاشة الإحصائيات)
+  Stream<List<FocusSession>> watchAll() {
+    return (select(focusSessions)..orderBy([(f) => OrderingTerm.asc(f.startTime)])).watch();
+  }
+
   Future<int> startSession(FocusSessionsCompanion entry) => into(focusSessions).insert(entry);
 
   Future<int> completeSession(int id, int durationSeconds) => (update(focusSessions)..where((f) => f.id.equals(id)))
