@@ -37,6 +37,7 @@ class AppScaffold extends StatelessWidget {
       child: Scaffold(
         backgroundColor: theme.scaffoldBackgroundColor,
         extendBody: showNav,
+        resizeToAvoidBottomInset: true,
         appBar: AppBar(
           leading: leading,
           automaticallyImplyLeading: leading != null,
@@ -51,6 +52,8 @@ class AppScaffold extends StatelessWidget {
               ? null
               : Text(
                   title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
@@ -74,9 +77,7 @@ class AppScaffold extends StatelessWidget {
           child: body,
         ),
         bottomNavigationBar:
-            showNav && navIndex >= 0
-                ? AppBottomNav(currentIndex: navIndex)
-                : null,
+            showNav && navIndex >= 0 ? AppBottomNav(currentIndex: navIndex) : null,
         floatingActionButton: floatingActionButton,
       ),
     );
