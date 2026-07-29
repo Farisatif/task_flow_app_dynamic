@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../core/theme/app_colors.dart';
+import '../core/utils/notification_service.dart';
 import '../core/utils/time_utils.dart';
 import '../widgets/app_scaffold.dart';
 
@@ -123,6 +124,16 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     }
   }
 
+  DateTime _taskReminderTime() {
+    return DateTime(
+      _date.year,
+      _date.month,
+      _date.day,
+      _start.hour,
+      _start.minute,
+    );
+  }
+
   Future<void> _save() async {
     if (_saving) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -139,6 +150,10 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     setState(() => _saving = true);
 
     try {
+      final reminderTime = _taskReminderTime();
+      final reminderBody =
+          'من ${_formatTime(_start)} إلى ${_formatTime(_end)}';
+
       if (widget.isEditing) {
         final existing = await db.tasksDao.watchById(widget.taskId!).first;
 
@@ -158,9 +173,17 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
               updatedAt: DateTime.now(),
             ),
           );
+
+          await NotificationService.cancelReminder(widget.taskId!);
+          await NotificationService.scheduleTaskReminder(
+            taskId: widget.taskId!,
+            title: _titleController.text.trim(),
+            scheduledTime: reminderTime,
+            body: reminderBody,
+          );
         }
       } else {
-        await db.tasksDao.insertTask(
+        final insertedId = await db.tasksDao.insertTask(
           TasksCompanion.insert(
             title: _titleController.text.trim(),
             notes: Value(
@@ -178,6 +201,13 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
             createdAt: Value(DateTime.now()),
             updatedAt: Value(DateTime.now()),
           ),
+        );
+
+        await NotificationService.scheduleTaskReminder(
+          taskId: insertedId,
+          title: _titleController.text.trim(),
+          scheduledTime: reminderTime,
+          body: reminderBody,
         );
       }
 
@@ -223,6 +253,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
     );
 
     if (confirmed == true && widget.taskId != null) {
+      await NotificationService.cancelReminder(widget.taskId!);
       await context.read<AppDatabase>().tasksDao.softDelete(widget.taskId!);
       if (mounted) context.pop();
     }
@@ -262,8 +293,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                         ? (isEditing ? 'تعديل مهمة' : 'أنشئ مهمة جديدة')
                         : _titleController.text.trim(),
                     dateLabel: _formatDate(_date),
-                    timeLabel:
-                        '${_formatTime(_start)} - ${_formatTime(_end)}',
+                    timeLabel: '${_formatTime(_start)} - ${_formatTime(_end)}',
                     priority: _priority,
                   ),
                   const SizedBox(height: 16),
@@ -448,8 +478,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                             value: selectedExists ? _projectId : null,
                             decoration: InputDecoration(
                               labelText: 'المشروع',
-                              prefixIcon:
-                                  const Icon(Icons.folder_outlined),
+                              prefixIcon: const Icon(Icons.folder_outlined),
                               filled: true,
                               fillColor: theme.colorScheme.surfaceContainerHighest
                                   .withOpacity(0.35),
@@ -487,8 +516,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                         ? 'عنوان المهمة'
                         : _titleController.text.trim(),
                     dateLabel: _formatDate(_date),
-                    timeLabel:
-                        '${_formatTime(_start)} - ${_formatTime(_end)}',
+                    timeLabel: '${_formatTime(_start)} - ${_formatTime(_end)}',
                     priorityLabel: _priorityLabel(_priority),
                     priorityColor: _priorityColor(_priority),
                     notesLabel: _notesController.text.trim().isEmpty
@@ -502,8 +530,7 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                     children: [
                       Expanded(
                         child: OutlinedButton(
-                          onPressed:
-                              _saving ? null : () => Navigator.pop(context),
+                          onPressed: _saving ? null : () => Navigator.pop(context),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
