@@ -40,7 +40,7 @@ class TaskActionMenu extends StatelessWidget {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
     final router = GoRouter.of(context);
-    final isCompleted = task.status == TaskStatus.completed;
+    final isCompleted = task.isDone;
 
     return Container(
       decoration: BoxDecoration(
@@ -119,7 +119,7 @@ class TaskActionMenu extends StatelessWidget {
                     status: const drift.Value(TaskStatus.pending),
                     categoryId: drift.Value.absentIfNull(task.categoryId),
                     projectId: drift.Value.absentIfNull(task.projectId),
-                    notes: drift.Value(task.notes),
+                    notes: drift.Value.absentIfNull(task.notes),
                     createdAt: drift.Value(DateTime.now()),
                     updatedAt: drift.Value(DateTime.now()),
                   ),
