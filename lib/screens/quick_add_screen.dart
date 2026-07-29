@@ -59,29 +59,43 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _quickTitleController.addListener(_onTitleChanged);
+  }
+
+  @override
   void dispose() {
+    _quickTitleController.removeListener(_onTitleChanged);
     _quickTitleController.dispose();
     super.dispose();
   }
 
-  void _openRoute(String route) {
+  void _onTitleChanged() {
+    if (mounted) setState(() {});
+  }
+
+  void _openRoute(String route, {String? initialTitle}) {
     final router = GoRouter.of(context);
-    Navigator.of(context).maybePop();
-    router.push(route);
+
+    Navigator.of(context).pop();
+    router.push(
+      route,
+      extra: initialTitle?.trim().isEmpty == true ? null : initialTitle!.trim(),
+    );
   }
 
   void _submitQuickTask() {
     final title = _quickTitleController.text.trim();
     if (title.isEmpty) return;
 
-    // إذا كانت شاشة task-form تدعم استقبال نص مبدئي لاحقًا،
-    // يمكن تمريره عبر extra أو queryParameters.
-    _openRoute('/task-form');
+    _openRoute('/task-form', initialTitle: title);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasText = _quickTitleController.text.trim().isNotEmpty;
 
     return Directionality(
       textDirection: TextDirection.rtl,
@@ -96,7 +110,10 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
                   children: [
                     IconButton(
                       onPressed: () => Navigator.of(context).pop(),
-                      icon: const Icon(Icons.close_rounded, color: Colors.white),
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -109,9 +126,9 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () => _openRoute('/task-form'),
+                      onPressed: _submitQuickTask,
                       child: const Text(
-                        'فتح النموذج',
+                        'إضافة المهمة',
                         style: TextStyle(color: Colors.white),
                       ),
                     ),
@@ -174,7 +191,10 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
                           final item = _items[i];
                           return _QuickActionCard(
                             item: item,
-                            onTap: () => _openRoute(item.route),
+                            onTap: () => _openRoute(
+                              item.route,
+                              initialTitle: _quickTitleController.text,
+                            ),
                           );
                         },
                       ),
@@ -187,9 +207,11 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
                           hintText: 'أو اكتب عنوان مهمة مباشرة...',
                           prefixIcon: const Icon(Icons.edit_rounded),
                           suffixIcon: IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.send_rounded,
-                              color: AppColors.primary,
+                              color: hasText
+                                  ? AppColors.primary
+                                  : theme.hintColor,
                             ),
                             onPressed: _submitQuickTask,
                           ),
@@ -203,6 +225,10 @@ class _QuickAddScreenState extends State<QuickAddScreen> {
                         ),
                       ),
                       const SizedBox(height: 10),
+                      _QuickPreview(
+                        title: hasText ? _quickTitleController.text.trim() : 'اكتب عنوانًا لتبدأ',
+                      ),
+                      const SizedBox(height: 12),
                       Row(
                         children: [
                           Expanded(
@@ -306,6 +332,58 @@ class _QuickActionCard extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _QuickPreview extends StatelessWidget {
+  final String title;
+
+  const _QuickPreview({
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withOpacity(
+          theme.brightness == Brightness.dark ? 0.12 : 0.08,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.primary.withOpacity(0.16)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: AppColors.primary,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Icon(
+              Icons.task_alt_rounded,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
