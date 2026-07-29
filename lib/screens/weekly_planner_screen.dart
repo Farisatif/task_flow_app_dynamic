@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../core/database/database.dart';
+import '../core/database/tables.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/app_scaffold.dart';
 
@@ -24,15 +25,18 @@ class WeeklyPlannerScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final db = context.watch<AppDatabase>();
+    final theme = Theme.of(context);
     final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    final startOfWeek = DateTime(now.year, now.month, now.day)
+        .subtract(Duration(days: now.weekday - 1));
     final endOfWeek = startOfWeek.add(const Duration(days: 6));
+    final today = DateTime(now.year, now.month, now.day);
 
     final dateRangeStr =
-        '${DateFormat('d', 'ar').format(startOfWeek)} - ${DateFormat('d MMMM yyyy', 'ar').format(endOfWeek)}';
+        '${DateFormat('d MMM', 'ar').format(startOfWeek)} - ${DateFormat('d MMMM yyyy', 'ar').format(endOfWeek)}';
 
     return AppScaffold(
-      title: 'الداشبورد الأسبوعي',
+      title: 'المخطط الأسبوعي',
       showNav: false,
       body: StreamBuilder<List<Task>>(
         stream: db.tasksDao.watchAll(),
@@ -40,8 +44,8 @@ class WeeklyPlannerScreen extends StatelessWidget {
           if (snapshot.hasError) {
             return Center(
               child: Text(
-                'حدث خطأ أثناء تحميل المهام',
-                style: Theme.of(context).textTheme.bodyMedium,
+                'حدث خطأ أثناء تحميل المهام الأسبوعية',
+                style: theme.textTheme.bodyMedium,
               ),
             );
           }
@@ -50,94 +54,151 @@ class WeeklyPlannerScreen extends StatelessWidget {
           final visibleTasks = allTasks.where((t) => !t.isDeleted).toList();
 
           final weekTasks = visibleTasks.where((t) {
-            final d = t.date;
-            return !d.isBefore(DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day)) &&
-                !d.isAfter(DateTime(endOfWeek.year, endOfWeek.month, endOfWeek.day, 23, 59, 59));
+            final d = DateTime(t.date.year, t.date.month, t.date.day);
+            return !d.isBefore(startOfWeek) && !d.isAfter(endOfWeek);
           }).toList();
 
-          final dayCounts = List<int>.generate(7, (index) {
-            final dayDate = DateTime(
-              startOfWeek.year,
-              startOfWeek.month,
-              startOfWeek.day,
-            ).add(Duration(days: index));
+          final weekCompleted =
+              weekTasks.where((t) => t.status == TaskStatus.completed).length;
+          final weekInProgress =
+              weekTasks.where((t) => t.status == TaskStatus.inProgress).length;
+          final weekPending =
+              weekTasks.where((t) => t.status == TaskStatus.pending).length;
 
+          final weekCompletionRate =
+              weekTasks.isEmpty ? 0.0 : weekCompleted / weekTasks.length;
+
+          final dayCounts = List<int>.generate(7, (index) {
+            final dayDate = startOfWeek.add(Duration(days: index));
             return visibleTasks.where((t) {
-              final d = t.date;
+              final d = DateTime(t.date.year, t.date.month, t.date.day);
               return d.year == dayDate.year &&
                   d.month == dayDate.month &&
                   d.day == dayDate.day;
             }).length;
           });
 
+          final completedPerDay = List<int>.generate(7, (index) {
+            final dayDate = startOfWeek.add(Duration(days: index));
+            return visibleTasks.where((t) {
+              final d = DateTime(t.date.year, t.date.month, t.date.day);
+              return d.year == dayDate.year &&
+                  d.month == dayDate.month &&
+                  d.day == dayDate.day &&
+                  t.status == TaskStatus.completed;
+            }).length;
+          });
+
           final maxDayCount = math.max(1, dayCounts.fold<int>(0, math.max));
 
           final priorityCounts = {
-            'high': visibleTasks.where((t) => _priorityKey(t.priority) == 'high').length,
-            'medium': visibleTasks.where((t) => _priorityKey(t.priority) == 'medium').length,
-            'low': visibleTasks.where((t) => _priorityKey(t.priority) == 'low').length,
-            'unknown': visibleTasks.where((t) => _priorityKey(t.priority) == 'unknown').length,
+            TaskPriority.high:
+                visibleTasks.where((t) => t.priority == TaskPriority.high).length,
+            TaskPriority.medium: visibleTasks
+                .where((t) => t.priority == TaskPriority.medium)
+                .length,
+            TaskPriority.low:
+                visibleTasks.where((t) => t.priority == TaskPriority.low).length,
           };
 
           final todayTasks = visibleTasks.where((t) {
-            final d = t.date;
-            return d.year == now.year && d.month == now.month && d.day == now.day;
+            final d = DateTime(t.date.year, t.date.month, t.date.day);
+            return d.year == today.year &&
+                d.month == today.month &&
+                d.day == today.day;
           }).length;
 
           final activeDays = dayCounts.where((c) => c > 0).length;
+          final busiestDayIndex = _bestIndex(dayCounts);
+          final bestDayLabel = dayLabels[busiestDayIndex];
+          final bestDayCount = dayCounts[busiestDayIndex];
+
+          final quietDayIndex = _lowestNonZeroIndex(dayCounts);
+          final quietDayLabel =
+              quietDayIndex == null ? 'لا يوجد' : dayLabels[quietDayIndex];
+
+          final nextSuggestion = weekCompletionRate >= 0.75
+              ? 'أنت تسير بشكل ممتاز هذا الأسبوع. حافظ على نفس النسق ولا تكدّس المهام في آخر الأسبوع.'
+              : weekCompletionRate >= 0.4
+                  ? 'أداء جيد، لكن حاول توزيع المهام على أيام أكثر لتخفيف الضغط.'
+                  : 'ابدأ بتحديد 2–3 مهام أساسية يوميًا حتى يتضح لك إيقاع الأسبوع.';
 
           return ListView(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
               _HeaderCard(
                 title: 'المخطط الأسبوعي',
                 subtitle: dateRangeStr,
                 icon: Icons.dashboard_rounded,
+                completionRate: weekCompletionRate,
+                weekTasks: weekTasks.length,
+                completed: weekCompleted,
+                activeDays: activeDays,
               ),
               const SizedBox(height: 16),
-
+              _SectionTitle(
+                title: 'ملخص أسبوعك',
+                subtitle: 'أرقام تساعدك على قراءة أداءك بسرعة',
+              ),
+              const SizedBox(height: 10),
               GridView.count(
                 crossAxisCount: 2,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
-                childAspectRatio: 1.7,
+                childAspectRatio: 1.65,
                 children: [
                   _StatCard(
                     title: 'إجمالي الأسبوع',
                     value: weekTasks.length.toString(),
                     icon: Icons.assignment_rounded,
-                    color: Theme.of(context).colorScheme.primary,
+                    color: theme.colorScheme.primary,
                   ),
                   _StatCard(
                     title: 'مهام اليوم',
                     value: todayTasks.toString(),
                     icon: Icons.today_rounded,
-                    color: Theme.of(context).colorScheme.secondary,
+                    color: theme.colorScheme.secondary,
                   ),
                   _StatCard(
                     title: 'أيام نشطة',
                     value: activeDays.toString(),
                     icon: Icons.event_available_rounded,
-                    color: AppColors.priorityMedium,
+                    color: AppColors.accentGreen,
                   ),
                   _StatCard(
-                    title: 'أعلى أولوية',
-                    value: priorityCounts['high'].toString(),
-                    icon: Icons.priority_high_rounded,
+                    title: 'منجزة هذا الأسبوع',
+                    value: weekCompleted.toString(),
+                    icon: Icons.check_circle_outline_rounded,
                     color: AppColors.priorityHigh,
                   ),
                 ],
               ),
-
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
+              _InsightCard(
+                title: 'قراءة سريعة',
+                body:
+                    'هذا الأسبوع لديك ${weekTasks.length} مهمة إجمالًا، منها $weekCompleted مكتملة و$weekInProgress قيد التنفيذ و$weekPending بانتظار التنفيذ. '
+                    'نسبة الإنجاز الحالية بلغت ${(weekCompletionRate * 100).toStringAsFixed(0)}%، وهو مؤشر جيد لمعرفة مدى توازن أسبوعك.',
+                icon: Icons.insights_rounded,
+                color: AppColors.primary,
+              ),
+              const SizedBox(height: 12),
+              _InsightCard(
+                title: 'أفضل يوم وأهدأ يوم',
+                body:
+                    'اليوم الأكثر ازدحامًا كان "$bestDayLabel" بعدد $bestDayCount مهمة. '
+                    '${quietDayIndex == null ? 'لم يظهر يوم هادئ واضح هذا الأسبوع.' : 'أما اليوم الأقل ضغطًا فهو "$quietDayLabel"، ويمكن استخدامه للمهام العميقة أو المراجعة.'}',
+                icon: Icons.event_note_rounded,
+                color: AppColors.accentBlue,
+              ),
+              const SizedBox(height: 16),
               _SectionTitle(
                 title: 'مخطط المهام الأسبوعي',
-                subtitle: 'عدد المهام لكل يوم',
+                subtitle: 'كم مهمة أُضيفت في كل يوم',
               ),
               const SizedBox(height: 10),
-
               Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -148,6 +209,7 @@ class WeeklyPlannerScreen extends StatelessWidget {
                   child: Column(
                     children: List.generate(7, (index) {
                       final count = dayCounts[index];
+                      final completedCount = completedPerDay[index];
                       final ratio = count / maxDayCount;
                       final isToday = index == now.weekday - 1;
 
@@ -156,30 +218,48 @@ class WeeklyPlannerScreen extends StatelessWidget {
                         child: Row(
                           children: [
                             SizedBox(
-                              width: 72,
-                              child: Text(
-                                dayLabels[index],
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
+                              width: 86,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    dayLabels[index],
+                                    style:
+                                        theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight:
+                                          isToday ? FontWeight.w800 : FontWeight.w600,
+                                      color: isToday
+                                          ? theme.colorScheme.primary
+                                          : null,
                                     ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '$completedCount مكتملة',
+                                    style: theme.textTheme.bodySmall,
+                                  ),
+                                ],
                               ),
                             ),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(999),
                                 child: Container(
                                   height: 12,
-                                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                  color:
+                                      theme.colorScheme.surfaceContainerHighest,
                                   child: FractionallySizedBox(
                                     alignment: Alignment.centerLeft,
                                     widthFactor: ratio == 0 ? 0.03 : ratio,
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(999),
+                                        borderRadius:
+                                            BorderRadius.circular(999),
                                         gradient: LinearGradient(
                                           colors: [
-                                            Theme.of(context).colorScheme.primary,
-                                            Theme.of(context).colorScheme.tertiary,
+                                            theme.colorScheme.primary,
+                                            theme.colorScheme.tertiary,
                                           ],
                                         ),
                                       ),
@@ -190,13 +270,13 @@ class WeeklyPlannerScreen extends StatelessWidget {
                             ),
                             const SizedBox(width: 12),
                             SizedBox(
-                              width: 28,
+                              width: 34,
                               child: Text(
                                 '$count',
                                 textAlign: TextAlign.end,
-                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                           ],
@@ -206,14 +286,72 @@ class WeeklyPlannerScreen extends StatelessWidget {
                   ),
                 ),
               ),
-
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
               _SectionTitle(
-                title: 'توزيع الأولويات',
-                subtitle: 'تحليل سريع حسب مستوى الأهمية',
+                title: 'تقدم الإنجاز اليومي داخل الأسبوع',
+                subtitle: 'مقارنة بين عدد المهام وعدد المكتمل منها',
               ),
               const SizedBox(height: 10),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: List.generate(7, (index) {
+                      final total = dayCounts[index];
+                      final done = completedPerDay[index];
+                      final rate = total == 0 ? 0.0 : done / total;
 
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    dayLabels[index],
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                                Text(
+                                  '$done / $total',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: LinearProgressIndicator(
+                                value: total == 0 ? 0 : rate,
+                                minHeight: 10,
+                                backgroundColor:
+                                    theme.colorScheme.surfaceContainerHighest,
+                                color: AppColors.accentGreen,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              _SectionTitle(
+                title: 'توزيع الأولويات',
+                subtitle: 'كيف يتوزع جهدك بين المهم والعاجل؟',
+              ),
+              const SizedBox(height: 10),
               Card(
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -225,60 +363,63 @@ class WeeklyPlannerScreen extends StatelessWidget {
                     children: [
                       _PriorityRow(
                         label: 'عالية',
-                        count: priorityCounts['high']!,
+                        count: priorityCounts[TaskPriority.high] ?? 0,
                         total: visibleTasks.length,
                         color: AppColors.priorityHigh,
                       ),
                       const SizedBox(height: 12),
                       _PriorityRow(
                         label: 'متوسطة',
-                        count: priorityCounts['medium']!,
+                        count: priorityCounts[TaskPriority.medium] ?? 0,
                         total: visibleTasks.length,
                         color: AppColors.priorityMedium,
                       ),
                       const SizedBox(height: 12),
                       _PriorityRow(
                         label: 'منخفضة',
-                        count: priorityCounts['low']!,
+                        count: priorityCounts[TaskPriority.low] ?? 0,
                         total: visibleTasks.length,
                         color: AppColors.priorityLow,
-                      ),
-                      const SizedBox(height: 12),
-                      _PriorityRow(
-                        label: 'غير محددة',
-                        count: priorityCounts['unknown']!,
-                        total: visibleTasks.length,
-                        color: Theme.of(context).colorScheme.outline,
                       ),
                     ],
                   ),
                 ),
               ),
-
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
               _SectionTitle(
-                title: 'مهام كل يوم',
-                subtitle: 'عرض تفصيلي للأسبوع الحالي',
+                title: 'ملخص الأسبوع النصي',
+                subtitle: 'قراءة مختصرة تساعدك على اتخاذ القرار',
               ),
               const SizedBox(height: 10),
-
+              _InsightCard(
+                title: 'توصية الأسبوع',
+                body: nextSuggestion,
+                icon: Icons.lightbulb_outline_rounded,
+                color: AppColors.accentOrange,
+              ),
+              const SizedBox(height: 16),
+              _SectionTitle(
+                title: 'مهام كل يوم',
+                subtitle: 'عرض تفصيلي لأيام الأسبوع الحالي',
+              ),
+              const SizedBox(height: 10),
               ...List.generate(7, (index) {
-                final dayDate = DateTime(
-                  startOfWeek.year,
-                  startOfWeek.month,
-                  startOfWeek.day,
-                ).add(Duration(days: index));
+                final dayDate = startOfWeek.add(Duration(days: index));
 
                 final dayTasks = visibleTasks.where((t) {
-                  final d = t.date;
+                  final d = DateTime(t.date.year, t.date.month, t.date.day);
                   return d.year == dayDate.year &&
                       d.month == dayDate.month &&
                       d.day == dayDate.day;
                 }).toList();
 
-                final isToday = dayDate.year == now.year &&
-                    dayDate.month == now.month &&
-                    dayDate.day == now.day;
+                final isToday = dayDate.year == today.year &&
+                    dayDate.month == today.month &&
+                    dayDate.day == today.day;
+
+                final completedCount = dayTasks
+                    .where((t) => t.status == TaskStatus.completed)
+                    .length;
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 10),
@@ -296,25 +437,26 @@ class WeeklyPlannerScreen extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 dayLabels[index],
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                    ),
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                             if (isToday)
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 5,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .primary
+                                  color: theme.colorScheme.primary
                                       .withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(999),
                                 ),
                                 child: Text(
                                   'اليوم',
                                   style: TextStyle(
-                                    color: Theme.of(context).colorScheme.primary,
+                                    color: theme.colorScheme.primary,
                                     fontSize: 12,
                                     fontWeight: FontWeight.w700,
                                   ),
@@ -322,20 +464,31 @@ class WeeklyPlannerScreen extends StatelessWidget {
                               ),
                           ],
                         ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${DateFormat('d MMMM', 'ar').format(dayDate)} • $completedCount مكتملة',
+                          style: theme.textTheme.bodySmall,
+                        ),
                         const SizedBox(height: 12),
                         if (dayTasks.isEmpty)
                           Text(
-                            'لا توجد مهام',
-                            style: Theme.of(context).textTheme.bodySmall,
+                            'لا توجد مهام في هذا اليوم',
+                            style: theme.textTheme.bodySmall,
                           )
                         else
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
-                            children: dayTasks.map((t) {
-                              final color = _priorityColor(t.priority);
+                            children: dayTasks.map((task) {
+                              final color = _priorityColor(task.priority);
+                              final completed =
+                                  task.status == TaskStatus.completed;
+
                               return Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 7,
+                                ),
                                 decoration: BoxDecoration(
                                   color: color.withOpacity(0.12),
                                   borderRadius: BorderRadius.circular(12),
@@ -350,15 +503,18 @@ class WeeklyPlannerScreen extends StatelessWidget {
                                       width: 8,
                                       height: 8,
                                       decoration: BoxDecoration(
-                                        color: color,
+                                        color: completed
+                                            ? AppColors.accentGreen
+                                            : color,
                                         shape: BoxShape.circle,
                                       ),
                                     ),
                                     const SizedBox(width: 8),
                                     ConstrainedBox(
-                                      constraints: const BoxConstraints(maxWidth: 180),
+                                      constraints:
+                                          const BoxConstraints(maxWidth: 180),
                                       child: Text(
-                                        t.title,
+                                        task.title,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
                                           color: color,
@@ -384,34 +540,41 @@ class WeeklyPlannerScreen extends StatelessWidget {
     );
   }
 
-  String _priorityKey(Object? priority) {
-    if (priority == null) return 'unknown';
-
-    final raw = priority.toString().toLowerCase();
-    final value = raw.contains('.') ? raw.split('.').last : raw;
-
-    if (value.contains('high') || value.contains('عالية') || value.contains('مرتفع')) {
-      return 'high';
+  int _bestIndex(List<int> data) {
+    if (data.isEmpty) return 0;
+    var bestIndex = 0;
+    var bestValue = data.first;
+    for (var i = 1; i < data.length; i++) {
+      if (data[i] > bestValue) {
+        bestValue = data[i];
+        bestIndex = i;
+      }
     }
-    if (value.contains('medium') || value.contains('normal') || value.contains('متوسطة')) {
-      return 'medium';
-    }
-    if (value.contains('low') || value.contains('منخفض')) {
-      return 'low';
-    }
-    return 'unknown';
+    return bestIndex;
   }
 
-  Color _priorityColor(Object? priority) {
-    switch (_priorityKey(priority)) {
-      case 'high':
+  int? _lowestNonZeroIndex(List<int> data) {
+    int? index;
+    int? lowest;
+    for (var i = 0; i < data.length; i++) {
+      final v = data[i];
+      if (v <= 0) continue;
+      if (lowest == null || v < lowest) {
+        lowest = v;
+        index = i;
+      }
+    }
+    return index;
+  }
+
+  Color _priorityColor(TaskPriority p) {
+    switch (p) {
+      case TaskPriority.high:
         return AppColors.priorityHigh;
-      case 'medium':
+      case TaskPriority.medium:
         return AppColors.priorityMedium;
-      case 'low':
+      case TaskPriority.low:
         return AppColors.priorityLow;
-      default:
-        return AppColors.priorityLow.withOpacity(0.7);
     }
   }
 }
@@ -420,23 +583,33 @@ class _HeaderCard extends StatelessWidget {
   final String title;
   final String subtitle;
   final IconData icon;
+  final double completionRate;
+  final int weekTasks;
+  final int completed;
+  final int activeDays;
 
   const _HeaderCard({
     required this.title,
     required this.subtitle,
     required this.icon,
+    required this.completionRate,
+    required this.weekTasks,
+    required this.completed,
+    required this.activeDays,
   });
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
         gradient: LinearGradient(
           colors: [
-            Theme.of(context).colorScheme.primary,
-            Theme.of(context).colorScheme.tertiary,
+            theme.colorScheme.primary,
+            theme.colorScheme.tertiary,
           ],
         ),
       ),
@@ -471,6 +644,37 @@ class _HeaderCard extends StatelessWidget {
                     color: Colors.white.withOpacity(0.9),
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'هذا الأسبوع: $weekTasks مهمة، منها $completed مكتملة، ونشاطك موزع على $activeDays يومًا.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withOpacity(0.92),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 14),
+          SizedBox(
+            width: 74,
+            height: 74,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                CircularProgressIndicator(
+                  value: completionRate,
+                  strokeWidth: 8,
+                  backgroundColor: Colors.white.withOpacity(0.22),
+                  color: Colors.white,
+                ),
+                Text(
+                  '${(completionRate * 100).round()}%',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ],
@@ -527,10 +731,12 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: theme.cardColor,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withOpacity(0.14)),
       ),
@@ -553,14 +759,14 @@ class _StatCard extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: theme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   title,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: theme.textTheme.bodySmall,
                 ),
               ],
             ),
@@ -630,6 +836,68 @@ class _PriorityRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _InsightCard extends StatelessWidget {
+  final String title;
+  final String body;
+  final IconData icon;
+  final Color color;
+
+  const _InsightCard({
+    required this.title,
+    required this.body,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.12)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  body,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
