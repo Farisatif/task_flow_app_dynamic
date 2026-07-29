@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-
+import '../database/database.dart';
 import '../database/tables.dart';
 
 enum SmartNotificationType {
