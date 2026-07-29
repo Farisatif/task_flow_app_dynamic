@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:provider/provider.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart' as intl;
+
 import '../core/database/database.dart';
 import '../core/database/tables.dart';
+import '../core/theme/app_colors.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/quick_add_modal.dart';
 import '../widgets/reorderable_task_list.dart';
-import '../core/theme/app_colors.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -16,7 +17,9 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final db = context.watch<AppDatabase>();
-    final dateStr = intl.DateFormat('d MMMM yyyy', 'ar').format(DateTime.now());
+    final today = DateUtils.dateOnly(DateTime.now());
+    final dateStr = intl.DateFormat('EEEE, d MMMM yyyy', 'ar').format(today);
+    final theme = Theme.of(context);
 
     return AppScaffold(
       title: '',
@@ -25,225 +28,572 @@ class HomeScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton(
         onPressed: () => QuickAddModal.show(context),
         backgroundColor: AppColors.primary,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        child: const Icon(Icons.add_rounded, color: Colors.white, size: 28),
       ),
       body: StreamBuilder<List<Task>>(
-        stream: db.tasksDao.watchTasksForDate(DateTime.now()),
-        builder: (context, snapshot) {
-          final tasks = snapshot.data ?? [];
+        stream: db.tasksDao.watchTasksForDate(today),
+        builder: (context, taskSnapshot) {
+          final tasks = taskSnapshot.data ?? [];
+
           final total = tasks.length;
-          final completed = tasks.where((t) => t.status == TaskStatus.completed).length;
-          final inProgress = tasks.where((t) => t.status == TaskStatus.inProgress).length;
-          final pending = tasks.where((t) => t.status == TaskStatus.pending).length;
+          final completed =
+              tasks.where((t) => t.status == TaskStatus.completed).length;
+          final inProgress =
+              tasks.where((t) => t.status == TaskStatus.inProgress).length;
+          final pending =
+              tasks.where((t) => t.status == TaskStatus.pending).length;
+
           final progress = total == 0 ? 0.0 : completed / total;
 
-          return ListView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-            children: [
-              // Dynamic greeting with profile name
-              StreamBuilder<ProfileRow?>(
-                stream: db.profileDao.watchProfile(),
-                builder: (context, snapshot) {
-                  final profile = snapshot.data;
-                  final userName = profile?.name ?? 'المستخدم';
+          return StreamBuilder<ProfileRow?>(
+            stream: db.profileDao.watchProfile(),
+            builder: (context, profileSnapshot) {
+              final profile = profileSnapshot.data;
+              final userName = profile?.name ?? 'المستخدم';
 
-                  return Row(
+              return ListView(
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
+                children: [
+                  _TopBar(
+                    userName: userName,
+                    onSearch: () => context.push('/search'),
+                    onNotifications: () => context.push('/reminders'),
+                  ),
+                  const SizedBox(height: 16),
+                  _HeroCard(
+                    dateStr: dateStr,
+                    progress: progress,
+                    total: total,
+                    completed: completed,
+                  ),
+                  const SizedBox(height: 14),
+                  Row(
                     children: [
-                      CircleAvatar(
-                        radius: 24,
-                        backgroundColor: AppColors.primary.withOpacity(0.15),
-                        child: const Icon(Icons.person, color: AppColors.primary),
+                      _MiniStat(
+                        value: '$total',
+                        label: 'المهام',
+                        color: AppColors.primary,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('مرحبًا $userName 👋', style: Theme.of(context).textTheme.titleLarge),
-                            Text('جاهز ليوم منتج؟', style: Theme.of(context).textTheme.bodyMedium),
-                          ],
-                        ),
+                      _MiniStat(
+                        value: '$completed',
+                        label: 'منجزة',
+                        color: AppColors.accentGreen,
                       ),
-                      IconButton(onPressed: () => context.push('/search'), icon: const Icon(Icons.search)),
-                      IconButton(onPressed: () => context.push('/reminders'), icon: const Icon(Icons.notifications_outlined)),
+                      _MiniStat(
+                        value: '$inProgress',
+                        label: 'مستمرة',
+                        color: AppColors.accentOrange,
+                      ),
+                      _MiniStat(
+                        value: '$pending',
+                        label: 'منتظرة',
+                        color: AppColors.accentPink,
+                      ),
                     ],
-                  );
-                },
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(gradient: AppColors.primaryGradient, borderRadius: BorderRadius.circular(24)),
-                child: Row(
-                  children: [
-                    CircularPercentIndicator(
-                      radius: 40,
-                      lineWidth: 8,
-                      percent: progress.clamp(0, 1),
-                      animation: true,
-                      circularStrokeCap: CircularStrokeCap.round,
-                      backgroundColor: Colors.white.withOpacity(0.25),
-                      progressColor: Colors.white,
-                      center: Text('${(progress * 100).round()}%',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 18),
+                  _SectionHeader(
+                    title: 'مهام اليوم',
+                    actionLabel: 'عرض الكل',
+                    onAction: () => context.push('/today'),
+                  ),
+                  const SizedBox(height: 10),
+                  if (tasks.isEmpty)
+                    _EmptyState(onAdd: () => QuickAddModal.show(context))
+                  else
+                    ReorderableTaskList(
+                      tasks: tasks.take(6).toList(),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('إنجاز اليوم', style: TextStyle(color: Colors.white70, fontSize: 13)),
-                          const SizedBox(height: 4),
-                          Text(dateStr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  _miniStat(context, '$total', 'المهام', AppColors.primary),
-                  _miniStat(context, '$completed', 'منجزة', AppColors.accentGreen),
-                  _miniStat(context, '$inProgress', 'مستمرة', AppColors.accentOrange),
-                  _miniStat(context, '$pending', 'منتظرة', AppColors.accentPink),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('مهام اليوم', style: Theme.of(context).textTheme.titleMedium),
-                  TextButton(onPressed: () => context.push('/today'), child: const Text('عرض الكل')),
-                ],
-              ),
-              if (tasks.isEmpty)
-                _buildEmptyState(context)
-              else
-                ReorderableTaskList(tasks: tasks.take(6).toList()),
-              const SizedBox(height: 8),
-              _quickAccessGrid(context),
-              const SizedBox(height: 20),
-              // Overdue tasks warning
-              StreamBuilder<int>(
-                stream: db.statisticsDao.watchOverdueTasksCount(),
-                builder: (context, snapshot) {
-                  final overdueCount = snapshot.data ?? 0;
-                  if (overdueCount == 0) return const SizedBox();
+                  const SizedBox(height: 18),
+                  _SectionHeader(
+                    title: 'وصول سريع',
+                    actionLabel: '',
+                    onAction: null,
+                  ),
+                  const SizedBox(height: 10),
+                  _QuickAccessGrid(
+                    onTapItem: (route) => context.push(route),
+                  ),
+                  const SizedBox(height: 18),
+                  StreamBuilder<int>(
+                    stream: db.statisticsDao.watchOverdueTasksCount(),
+                    builder: (context, overdueSnapshot) {
+                      final overdueCount = overdueSnapshot.data ?? 0;
+                      if (overdueCount == 0) return const SizedBox.shrink();
 
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentOrange.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.accentOrange.withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.warning_amber, color: AppColors.accentOrange),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('مهام متأخرة', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.accentOrange)),
-                              Text('لديك $overdueCount مهام متأخرة', style: Theme.of(context).textTheme.bodySmall),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ],
+                      return _OverdueBanner(
+                        overdueCount: overdueCount,
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
           );
         },
       ),
     );
   }
+}
 
-  Widget _miniStat(BuildContext context, String value, String label, Color color) {
+class _TopBar extends StatelessWidget {
+  final String userName;
+  final VoidCallback onSearch;
+  final VoidCallback onNotifications;
+
+  const _TopBar({
+    required this.userName,
+    required this.onSearch,
+    required this.onNotifications,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: AppColors.primary.withOpacity(0.14),
+          child: const Icon(
+            Icons.person_rounded,
+            color: AppColors.primary,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'مرحبًا $userName 👋',
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'جاهز ليوم منتج؟',
+                style: theme.textTheme.bodyMedium,
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          onPressed: onSearch,
+          icon: const Icon(Icons.search_rounded),
+          tooltip: 'بحث',
+        ),
+        IconButton(
+          onPressed: onNotifications,
+          icon: const Icon(Icons.notifications_none_rounded),
+          tooltip: 'التنبيهات',
+        ),
+      ],
+    );
+  }
+}
+
+class _HeroCard extends StatelessWidget {
+  final String dateStr;
+  final double progress;
+  final int total;
+  final int completed;
+
+  const _HeroCard({
+    required this.dateStr,
+    required this.progress,
+    required this.total,
+    required this.completed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = (progress * 100).round();
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius: BorderRadius.circular(26),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withOpacity(0.18),
+            blurRadius: 24,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircularPercentIndicator(
+            radius: 42,
+            lineWidth: 8,
+            percent: progress.clamp(0.0, 1.0),
+            animation: true,
+            animationDuration: 500,
+            circularStrokeCap: CircularStrokeCap.round,
+            backgroundColor: Colors.white.withOpacity(0.22),
+            progressColor: Colors.white,
+            center: Text(
+              '$percent%',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'إنجاز اليوم',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white70,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  dateStr,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  total == 0
+                      ? 'لا توجد مهام اليوم، أضف أول مهمة الآن'
+                      : 'أكملت $completed من $total مهام حتى الآن',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: Colors.white.withOpacity(0.92),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final String value;
+  final String label;
+  final Color color;
+
+  const _MiniStat({
+    required this.value,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Expanded(
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
         decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Theme.of(context).dividerColor),
+          color: theme.cardColor,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: theme.dividerColor.withOpacity(0.08)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Column(
           children: [
-            Text(value, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: color)),
+            Text(
+              value,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: color,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
             const SizedBox(height: 2),
-            Text(label, style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 40),
-        child: Column(
-          children: [
-            Icon(Icons.task_alt, size: 64, color: Colors.grey.withOpacity(0.3)),
-            const SizedBox(height: 16),
-            Text('يومك هادئ.. لا توجد مهام حالياً', style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey)),
-            const SizedBox(height: 8),
-            Text('اضغط + لإضافة أول مهمة', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey)),
-          ],
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final String actionLabel;
+  final VoidCallback? onAction;
+
+  const _SectionHeader({
+    required this.title,
+    required this.actionLabel,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Row(
+      children: [
+        Text(
+          title,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
         ),
+        const Spacer(),
+        if (onAction != null)
+          TextButton(
+            onPressed: onAction,
+            child: Text(actionLabel),
+          ),
+      ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  final VoidCallback onAdd;
+
+  const _EmptyState({
+    required this.onAdd,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.08)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 74,
+            height: 74,
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.10),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.task_alt_rounded,
+              color: AppColors.primary,
+              size: 36,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'يومك هادئ.. لا توجد مهام حالياً',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'اضغط + لإضافة أول مهمة وابدأ اليوم بقوة',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: onAdd,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+            ),
+            icon: const Icon(Icons.add_rounded),
+            label: const Text('إضافة مهمة'),
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _quickAccessGrid(BuildContext context) {
-    final items = [
-      ('الأهداف', Icons.flag_outlined, AppColors.primary, '/goals'),
-      ('العادات', Icons.repeat, AppColors.accentGreen, '/habits'),
-      ('المشاريع', Icons.folder_outlined, AppColors.accentBlue, '/projects'),
-      ('مؤقت التركيز', Icons.timer_outlined, AppColors.accentOrange, '/focus-timer'),
-      ('الملاحظات', Icons.sticky_note_2_outlined, AppColors.accentPink, '/notes'),
-      ('الإحصائيات', Icons.insights_outlined, AppColors.secondary, '/statistics'),
+class _QuickAccessGrid extends StatelessWidget {
+  final void Function(String route) onTapItem;
+
+  const _QuickAccessGrid({
+    required this.onTapItem,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = <({String title, IconData icon, Color color, String route})>[
+      (
+        title: 'الأهداف',
+        icon: Icons.flag_outlined,
+        color: AppColors.primary,
+        route: '/goals',
+      ),
+      (
+        title: 'العادات',
+        icon: Icons.repeat_rounded,
+        color: AppColors.accentGreen,
+        route: '/habits',
+      ),
+      (
+        title: 'المشاريع',
+        icon: Icons.folder_outlined,
+        color: AppColors.accentBlue,
+        route: '/projects',
+      ),
+      (
+        title: 'مؤقت التركيز',
+        icon: Icons.timer_outlined,
+        color: AppColors.accentOrange,
+        route: '/focus-timer',
+      ),
+      (
+        title: 'الملاحظات',
+        icon: Icons.sticky_note_2_outlined,
+        color: AppColors.accentPink,
+        route: '/notes',
+      ),
+      (
+        title: 'الإحصائيات',
+        icon: Icons.insights_outlined,
+        color: AppColors.secondary,
+        route: '/statistics',
+      ),
     ];
+
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(top: 8),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 3, mainAxisSpacing: 12, crossAxisSpacing: 12, childAspectRatio: 1.05),
       itemCount: items.length,
+      padding: EdgeInsets.zero,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 3,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.02,
+      ),
       itemBuilder: (context, i) {
-        final it = items[i];
+        final item = items[i];
+
         return InkWell(
           borderRadius: BorderRadius.circular(18),
-          onTap: () => context.push(it.$4),
+          onTap: () => onTapItem(item.route),
           child: Container(
             decoration: BoxDecoration(
-              color: Theme.of(context).cardTheme.color,
+              color: Theme.of(context).cardColor,
               borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: Theme.of(context).dividerColor),
+              border: Border.all(
+                color: Theme.of(context).dividerColor.withOpacity(0.08),
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.03),
+                  blurRadius: 16,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: it.$3.withOpacity(0.15), shape: BoxShape.circle),
-                  child: Icon(it.$2, color: it.$3),
+                  decoration: BoxDecoration(
+                    color: item.color.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(item.icon, color: item.color),
                 ),
                 const SizedBox(height: 8),
-                Text(it.$1, style: Theme.of(context).textTheme.bodySmall, textAlign: TextAlign.center),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                  child: Text(
+                    item.title,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+}
+
+class _OverdueBanner extends StatelessWidget {
+  final int overdueCount;
+
+  const _OverdueBanner({
+    required this.overdueCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.accentOrange.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.accentOrange.withOpacity(0.24),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.warning_amber_rounded, color: AppColors.accentOrange),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'مهام متأخرة',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: AppColors.accentOrange,
+                        fontWeight: FontWeight.w700,
+                      ),
+                ),
+                Text(
+                  'لديك $overdueCount مهام متأخرة تحتاج مراجعة',
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
