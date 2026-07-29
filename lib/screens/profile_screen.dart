@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -224,10 +225,8 @@ class ProfileScreen extends StatelessWidget {
                     decoration: InputDecoration(
                       labelText: 'الاسم',
                       filled: true,
-                      fillColor:
-                          theme.colorScheme.surfaceContainerHighest.withOpacity(
-                        0.35,
-                      ),
+                      fillColor: theme.colorScheme.surfaceContainerHighest
+                          .withOpacity(0.35),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -242,10 +241,8 @@ class ProfileScreen extends StatelessWidget {
                     decoration: InputDecoration(
                       labelText: 'البريد الإلكتروني',
                       filled: true,
-                      fillColor:
-                          theme.colorScheme.surfaceContainerHighest.withOpacity(
-                        0.35,
-                      ),
+                      fillColor: theme.colorScheme.surfaceContainerHighest
+                          .withOpacity(0.35),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -259,10 +256,8 @@ class ProfileScreen extends StatelessWidget {
                     decoration: InputDecoration(
                       labelText: 'المستوى',
                       filled: true,
-                      fillColor:
-                          theme.colorScheme.surfaceContainerHighest.withOpacity(
-                        0.35,
-                      ),
+                      fillColor: theme.colorScheme.surfaceContainerHighest
+                          .withOpacity(0.35),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -308,8 +303,9 @@ class ProfileScreen extends StatelessWidget {
 
                             final updated = profile.copyWith(
                               name: name,
-                              email: email.isEmpty ? null : email,
-                              levelLabel: level.isEmpty ? profile.levelLabel : level,
+                              email: Value(email.isEmpty ? null : email),
+                              levelLabel:
+                                  level.isEmpty ? profile.levelLabel : level,
                             );
 
                             await db.profileDao.upsertProfile(
