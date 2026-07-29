@@ -131,8 +131,8 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
     final selectedKind = _filter.kind;
 
     return attachments.where((attachment) {
-      final matchesQuery = query.isEmpty ||
-          attachment.name.toLowerCase().contains(query);
+      final matchesQuery =
+          query.isEmpty || attachment.name.toLowerCase().contains(query);
 
       final matchesKind =
           selectedKind == null ? true : attachment.kind == selectedKind;
@@ -571,8 +571,8 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
                         leading: Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: _kindColor(attachment.kind)
-                                .withOpacity(0.14),
+                            color:
+                                _kindColor(attachment.kind).withOpacity(0.14),
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
@@ -700,7 +700,9 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.08)),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withOpacity(0.08),
+        ),
       ),
       child: Row(
         children: [
@@ -784,7 +786,7 @@ class _HeroCard extends StatelessWidget {
                 child: _HeroPill(
                   icon: Icons.attach_file_rounded,
                   label: 'عدد الملفات',
-                  value: '$totalCount',
+                  value: totalCount.toString(),
                 ),
               ),
               const SizedBox(width: 10),
@@ -996,6 +998,70 @@ class _EmptyState extends StatelessWidget {
             onPressed: onAdd,
             icon: const Icon(Icons.add_rounded),
             label: const Text('إضافة مرفق'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PreviewCard extends StatelessWidget {
+  final String name;
+  final AttachmentKind kind;
+
+  const _PreviewCard({
+    required this.name,
+    required this.kind,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final color = _kindColor(kind);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color.withOpacity(theme.brightness == Brightness.dark ? 0.14 : 0.08),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: color.withOpacity(0.18)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              _kindIcon(kind),
+              color: Colors.white,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _kindLabel(kind),
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
+            ),
           ),
         ],
       ),
