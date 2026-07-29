@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart';
 
+import '../database/tables.dart';
+import '../models/smart_notification.dart';
+
 class NotificationService {
   NotificationService._();
 
@@ -9,6 +12,32 @@ class NotificationService {
     if (kDebugMode) {
       debugPrint('NotificationService initialized');
     }
+  }
+
+  /// يبني "صندوق إشعارات ذكي" من المهام الحالية
+  /// ويعيد قائمة إشعارات مرتبة حسب الأهمية.
+  static List<SmartNotification> buildSmartInbox(
+    List<Task> tasks, {
+    DateTime? now,
+  }) {
+    return SmartNotificationEngine.buildForTasks(
+      tasks,
+      now: now,
+    );
+  }
+
+  /// إشعارات مهمة واحدة فقط
+  static SmartNotification? buildTaskReminder(Task task, {DateTime? now}) {
+    final current = now ?? DateTime.now();
+    return SmartNotificationEngine.buildForTasks(
+      [task],
+      now: current,
+    ).isEmpty
+        ? null
+        : SmartNotificationEngine.buildForTasks(
+            [task],
+            now: current,
+          ).first;
   }
 
   static Future<void> scheduleTaskReminder(
@@ -39,5 +68,14 @@ class NotificationService {
     if (kDebugMode) {
       debugPrint('Instant notification -> $title | $body');
     }
+  }
+
+  /// رسالة سريعة مفيدة لعرضها داخل التطبيق
+  static String buildSummaryText(List<Task> tasks) {
+    final smart = buildSmartInbox(tasks);
+    if (smart.isEmpty) return 'لا توجد إشعارات ذكية الآن.';
+
+    final top = smart.first;
+    return '${top.title} — ${top.body}';
   }
 }
