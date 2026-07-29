@@ -18,7 +18,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final db = context.watch<AppDatabase>();
     final today = DateUtils.dateOnly(DateTime.now());
-    final dateStr = intl.DateFormat('EEEE, d MMMM yyyy', 'ar').format(today);
+    final dateStr = intl.DateFormat('EEEE، d MMMM yyyy', 'ar').format(today);
     final theme = Theme.of(context);
 
     return AppScaffold(
@@ -34,8 +34,16 @@ class HomeScreen extends StatelessWidget {
       body: StreamBuilder<List<Task>>(
         stream: db.tasksDao.watchTasksForDate(today),
         builder: (context, taskSnapshot) {
-          final tasks = taskSnapshot.data ?? [];
+          if (taskSnapshot.hasError) {
+            return Center(
+              child: Text(
+                'حدث خطأ أثناء تحميل مهام اليوم',
+                style: theme.textTheme.bodyMedium,
+              ),
+            );
+          }
 
+          final tasks = taskSnapshot.data ?? [];
           final total = tasks.length;
           final completed =
               tasks.where((t) => t.status == TaskStatus.completed).length;
@@ -43,8 +51,11 @@ class HomeScreen extends StatelessWidget {
               tasks.where((t) => t.status == TaskStatus.inProgress).length;
           final pending =
               tasks.where((t) => t.status == TaskStatus.pending).length;
-
           final progress = total == 0 ? 0.0 : completed / total;
+
+          final upcoming = _nextTask(tasks);
+          final firstTask = tasks.isEmpty ? null : tasks.first;
+          final lastTask = tasks.isEmpty ? null : tasks.last;
 
           return StreamBuilder<ProfileRow?>(
             stream: db.profileDao.watchProfile(),
@@ -66,6 +77,9 @@ class HomeScreen extends StatelessWidget {
                     progress: progress,
                     total: total,
                     completed: completed,
+                    inProgress: inProgress,
+                    pending: pending,
+                    upcoming: upcoming,
                   ),
                   const SizedBox(height: 14),
                   Row(
@@ -92,6 +106,25 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
+                  _InsightCard(
+                    title: total == 0
+                        ? 'ابدأ يومك بقوة'
+                        : progress >= 0.75
+                            ? 'أنت قريب من الإكمال'
+                            : progress >= 0.4
+                                ? 'تقدم ثابت'
+                                : 'ابدأ بتحريك المؤشر',
+                    body: total == 0
+                        ? 'لا توجد مهام مسجلة لليوم. أضف أول مهمة أو استخدم الإضافة السريعة.'
+                        : 'أنجزت $completed من أصل $total مهمة اليوم. ${
+                            upcoming == null
+                                ? 'لا توجد مهمة قادمة الآن.'
+                                : 'المهمة القادمة: ${upcoming.title} عند ${_formatMinutes(upcoming.startMinutes)}.'
+                          }',
+                    icon: Icons.auto_graph_rounded,
+                    color: AppColors.primary,
+                  ),
                   const SizedBox(height: 18),
                   _SectionHeader(
                     title: 'مهام اليوم',
@@ -116,6 +149,21 @@ class HomeScreen extends StatelessWidget {
                     onTapItem: (route) => context.push(route),
                   ),
                   const SizedBox(height: 18),
+                  _SectionHeader(
+                    title: 'ملاحظات اليوم',
+                    actionLabel: '',
+                    onAction: null,
+                  ),
+                  const SizedBox(height: 10),
+                  _TodaySummaryCard(
+                    total: total,
+                    completed: completed,
+                    inProgress: inProgress,
+                    pending: pending,
+                    firstTask: firstTask,
+                    lastTask: lastTask,
+                  ),
+                  const SizedBox(height: 18),
                   StreamBuilder<int>(
                     stream: db.statisticsDao.watchOverdueTasksCount(),
                     builder: (context, overdueSnapshot) {
@@ -134,6 +182,26 @@ class HomeScreen extends StatelessWidget {
         },
       ),
     );
+  }
+
+  static Task? _nextTask(List<Task> tasks) {
+    if (tasks.isEmpty) return null;
+    final nowMinutes =
+        TimeOfDay.now().hour * 60 + TimeOfDay.now().minute;
+
+    final sorted = [...tasks]..sort((a, b) => a.startMinutes.compareTo(b.startMinutes));
+
+    for (final task in sorted) {
+      if (task.startMinutes >= nowMinutes) return task;
+    }
+
+    return sorted.first;
+  }
+
+  static String _formatMinutes(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
   }
 }
 
@@ -201,12 +269,18 @@ class _HeroCard extends StatelessWidget {
   final double progress;
   final int total;
   final int completed;
+  final int inProgress;
+  final int pending;
+  final Task? upcoming;
 
   const _HeroCard({
     required this.dateStr,
     required this.progress,
     required this.total,
     required this.completed,
+    required this.inProgress,
+    required this.pending,
+    required this.upcoming,
   });
 
   @override
@@ -228,56 +302,86 @@ class _HeroCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          CircularPercentIndicator(
-            radius: 42,
-            lineWidth: 8,
-            percent: progress.clamp(0.0, 1.0),
-            animation: true,
-            animationDuration: 500,
-            circularStrokeCap: CircularStrokeCap.round,
-            backgroundColor: Colors.white.withOpacity(0.22),
-            progressColor: Colors.white,
-            center: Text(
-              '$percent%',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'إنجاز اليوم',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.white70,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  dateStr,
-                  style: theme.textTheme.titleMedium?.copyWith(
+          Row(
+            children: [
+              CircularPercentIndicator(
+                radius: 42,
+                lineWidth: 8,
+                percent: progress.clamp(0.0, 1.0),
+                animation: true,
+                animationDuration: 500,
+                circularStrokeCap: CircularStrokeCap.round,
+                backgroundColor: Colors.white.withOpacity(0.22),
+                progressColor: Colors.white,
+                center: Text(
+                  '$percent%',
+                  style: const TextStyle(
                     color: Colors.white,
-                    fontWeight: FontWeight.w800,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 10),
-                Text(
-                  total == 0
-                      ? 'لا توجد مهام اليوم، أضف أول مهمة الآن'
-                      : 'أكملت $completed من $total مهام حتى الآن',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: Colors.white.withOpacity(0.92),
-                    fontWeight: FontWeight.w600,
-                  ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'إنجاز اليوم',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white70,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      dateStr,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      total == 0
+                          ? 'لا توجد مهام اليوم، أضف أول مهمة الآن'
+                          : 'أكملت $completed من $total مهام حتى الآن',
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: Colors.white.withOpacity(0.92),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      upcoming == null
+                          ? 'لا توجد مهمة قادمة الآن'
+                          : 'المهمة القادمة: ${upcoming!.title} • ${_formatMinutes(upcoming!.startMinutes)}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: Colors.white70,
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _HeroPill(label: 'مكتملة', value: '$completed'),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _HeroPill(label: 'مستمرة', value: '$inProgress'),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _HeroPill(label: 'منتظرة', value: '$pending'),
+              ),
+            ],
           ),
         ],
       ),
@@ -595,5 +699,176 @@ class _OverdueBanner extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _HeroPill extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _HeroPill({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: Colors.white70, fontSize: 10),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightCard extends StatelessWidget {
+  final String title;
+  final String body;
+  final IconData icon;
+  final Color color;
+
+  const _InsightCard({
+    required this.title,
+    required this.body,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withOpacity(0.12)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  body,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TodaySummaryCard extends StatelessWidget {
+  final int total;
+  final int completed;
+  final int inProgress;
+  final int pending;
+  final Task? firstTask;
+  final Task? lastTask;
+
+  const _TodaySummaryCard({
+    required this.total,
+    required this.completed,
+    required this.inProgress,
+    required this.pending,
+    required this.firstTask,
+    required this.lastTask,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.cardColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.08)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            total == 0 ? 'لا توجد بيانات اليوم' : 'ملخص اليوم',
+            style: theme.textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            total == 0
+                ? 'ابدأ بإضافة مهامك لترى الملخص هنا.'
+                : 'منجزة: $completed • جارية: $inProgress • منتظرة: $pending',
+            style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: 10),
+          if (firstTask != null) ...[
+            Text(
+              'أول مهمة: ${firstTask!.title} • ${_formatMinutes(firstTask!.startMinutes)}',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+          if (lastTask != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              'آخر مهمة: ${lastTask!.title} • ${_formatMinutes(lastTask!.endMinutes)}',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatMinutes(int minutes) {
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
   }
 }
