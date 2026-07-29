@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-
-import '../database/tables.dart';
+import '../database/database.dart';
 import 'time_utils.dart';
+
 
 extension TaskUiExtensions on Task {
   Color priorityColor() {
