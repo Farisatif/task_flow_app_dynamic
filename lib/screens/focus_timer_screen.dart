@@ -54,7 +54,9 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     setState(() {
       _selectedMinutes = safeMinutes;
       _totalSeconds = safeMinutes * 60;
-      _remainingSeconds = resetProgress ? _totalSeconds : _remainingSeconds.clamp(0, _totalSeconds);
+      _remainingSeconds = resetProgress
+          ? _totalSeconds
+          : _remainingSeconds.clamp(0, _totalSeconds);
       if (resetProgress) {
         _running = false;
       }
@@ -71,7 +73,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     setState(() => _running = true);
 
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
@@ -84,7 +86,8 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
           _running = false;
         });
 
-        await SoundService.playNotification(context);
+        SoundService.playNotification(context);
+
         if (!mounted) return;
 
         ScaffoldMessenger.of(context).showSnackBar(
@@ -136,15 +139,9 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   }
 
   String get _subtitle {
-    if (_running) {
-      return 'جلسة بومودورو نشطة';
-    }
-    if (_remainingSeconds == _totalSeconds) {
-      return 'اضغط ابدأ للتركيز';
-    }
-    if (_remainingSeconds == 0) {
-      return 'تمت الجلسة بنجاح';
-    }
+    if (_running) return 'جلسة بومودورو نشطة';
+    if (_remainingSeconds == _totalSeconds) return 'اضغط ابدأ للتركيز';
+    if (_remainingSeconds == 0) return 'تمت الجلسة بنجاح';
     return 'الجلسة متوقفة مؤقتًا';
   }
 
@@ -318,7 +315,9 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
                           ),
                         ),
                         icon: Icon(
-                          _running ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                          _running
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
                         ),
                         label: Text(_running ? 'إيقاف مؤقت' : 'ابدأ الآن'),
                       ),
@@ -444,13 +443,17 @@ class _PresetSelector extends StatelessWidget {
             onSelected: (_) => onSelected(minutes),
             selectedColor: primaryColor.withOpacity(0.16),
             labelStyle: TextStyle(
-              color: selected ? primaryColor : Theme.of(context).textTheme.bodyMedium?.color,
+              color: selected
+                  ? primaryColor
+                  : Theme.of(context).textTheme.bodyMedium?.color,
               fontWeight: FontWeight.w700,
             ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(999),
               side: BorderSide(
-                color: selected ? primaryColor : Theme.of(context).dividerColor.withOpacity(0.10),
+                color: selected
+                    ? primaryColor
+                    : Theme.of(context).dividerColor.withOpacity(0.10),
               ),
             ),
           );
@@ -459,4 +462,5 @@ class _PresetSelector extends StatelessWidget {
         itemCount: presets.length,
       ),
     );
-  }}
+  }
+}
