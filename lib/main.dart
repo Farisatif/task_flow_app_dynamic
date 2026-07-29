@@ -13,13 +13,34 @@ import 'router/app_router.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('ar', null);
-  await NotificationService.initialize();
+  await NotificationService.initialize(
+    onTap: _handleNotificationTap,
+  );
 
   runApp(
     DatabaseBootstrap(
       builder: (context) => const TaskFlowApp(),
     ),
   );
+}
+
+void _handleNotificationTap(String? payload) {
+  if (payload == null || payload.trim().isEmpty) return;
+
+  final data = payload.trim();
+
+  if (data.startsWith('/')) {
+    appRouter.go(data);
+    return;
+  }
+
+  final taskId = int.tryParse(data);
+  if (taskId != null) {
+    appRouter.go('/task-details/$taskId');
+    return;
+  }
+
+  appRouter.go('/today');
 }
 
 class TaskFlowApp extends StatelessWidget {
