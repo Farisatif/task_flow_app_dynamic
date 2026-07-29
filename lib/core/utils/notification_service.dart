@@ -280,12 +280,10 @@ class SmartNotificationEngine {
       }
     }
 
-    final completedCount = todayTasks
-        .where((t) => t.status == TaskStatus.completed)
-        .length;
-    final pendingCount = todayTasks
-        .where((t) => t.status == TaskStatus.pending)
-        .length;
+    final completedCount =
+        todayTasks.where((t) => t.status == TaskStatus.completed).length;
+    final pendingCount =
+        todayTasks.where((t) => t.status == TaskStatus.pending).length;
 
     if (current.hour >= summaryHour) {
       notifications.add(
@@ -311,7 +309,8 @@ class SmartNotificationEngine {
     }
 
     notifications.sort((a, b) {
-      final priorityDiff = _priorityWeight(b.priority) - _priorityWeight(a.priority);
+      final priorityDiff =
+          _priorityWeight(b.priority) - _priorityWeight(a.priority);
       if (priorityDiff != 0) return priorityDiff;
       return a.scheduledAt.compareTo(b.scheduledAt);
     });
@@ -374,14 +373,15 @@ class NotificationService {
     return items.isEmpty ? null : items.first;
   }
 
-  static Future<void> scheduleTaskReminder(
-    int taskId,
-    String title,
-    DateTime scheduledTime,
-  ) async {
+  static Future<void> scheduleTaskReminder({
+    required int taskId,
+    required String title,
+    required DateTime scheduledTime,
+    String? body,
+  }) async {
     if (kDebugMode) {
       debugPrint(
-        'Scheduled reminder -> taskId: $taskId, title: $title, time: $scheduledTime',
+        'Scheduled reminder -> taskId: $taskId, title: $title, time: $scheduledTime, body: $body',
       );
     }
   }
