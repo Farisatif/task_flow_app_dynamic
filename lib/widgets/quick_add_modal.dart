@@ -13,7 +13,7 @@ class QuickAddModal extends StatefulWidget {
   const QuickAddModal({super.key});
 
   static Future<void> show(BuildContext context) {
-    return showModalBottomSheet(
+    return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -83,7 +83,6 @@ class _QuickAddModalState extends State<QuickAddModal> {
     if (title.isEmpty) return;
 
     _syncEndTimeIfNeeded();
-
     setState(() => _saving = true);
 
     try {
