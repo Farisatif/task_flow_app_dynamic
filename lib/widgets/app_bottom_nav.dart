@@ -32,14 +32,14 @@ class AppBottomNav extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
         child: Container(
-          height: 72,
+          height: 76,
           decoration: BoxDecoration(
             color: surfaceColor,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: borderColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(isDark ? 0.24 : 0.06),
+                color: Colors.black.withOpacity(isDark ? 0.22 : 0.06),
                 blurRadius: 24,
                 offset: const Offset(0, 10),
               ),
@@ -50,8 +50,7 @@ class AppBottomNav extends StatelessWidget {
               final item = _items[i];
               final selected = i == currentIndex;
 
-              final activeColor =
-                  isDark ? AppColors.primaryLight : AppColors.primary;
+              final activeColor = isDark ? AppColors.primaryLight : AppColors.primary;
               final inactiveColor = isDark
                   ? AppColors.darkTextTertiary
                   : AppColors.lightTextTertiary;
@@ -68,10 +67,7 @@ class AppBottomNav extends StatelessWidget {
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 220),
                       curve: Curves.easeOutCubic,
-                      margin: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 8,
-                      ),
+                      margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                       decoration: BoxDecoration(
                         color: selected
                             ? activeColor.withOpacity(isDark ? 0.16 : 0.12)
@@ -84,8 +80,8 @@ class AppBottomNav extends StatelessWidget {
                           AnimatedContainer(
                             duration: const Duration(milliseconds: 220),
                             curve: Curves.easeOutCubic,
-                            width: selected ? 36 : 28,
-                            height: selected ? 36 : 28,
+                            width: selected ? 36 : 30,
+                            height: selected ? 36 : 30,
                             decoration: BoxDecoration(
                               color: selected
                                   ? activeColor.withOpacity(isDark ? 0.20 : 0.14)
@@ -105,8 +101,7 @@ class AppBottomNav extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 10.5,
                               color: color,
-                              fontWeight:
-                                  selected ? FontWeight.w700 : FontWeight.w500,
+                              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                               height: 1.1,
                             ),
                             child: Text(
