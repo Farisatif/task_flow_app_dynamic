@@ -211,7 +211,7 @@ class StatisticsScreen extends StatelessWidget {
               child: StreamBuilder<String>(
                 stream: db.statisticsDao.watchBestProductivityHour(),
                 builder: (context, snapshot) {
-                  final bestTime = snapshot.data ?? '09:00 - 12:00';
+                  final bestTime = snapshot.data ?? 'لا توجد بيانات';
 
                   return Row(
                     children: [
