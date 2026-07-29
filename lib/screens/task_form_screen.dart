@@ -160,9 +160,11 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
           await db.tasksDao.updateTask(
             existing.copyWith(
               title: _titleController.text.trim(),
-              notes: _notesController.text.trim().isEmpty
-                  ? null
-                  : _notesController.text.trim(),
+              notes: Value(
+                _notesController.text.trim().isEmpty
+                    ? null
+                    : _notesController.text.trim(),
+              ),
               date: dayOnly,
               startMinutes: startMin,
               endMinutes: endMin,
