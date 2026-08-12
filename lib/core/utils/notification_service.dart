@@ -580,6 +580,69 @@ class NotificationService {
     }
   }
 
+  static const int _morningPlanId = 210000001;
+  static const int _dailySummaryId = 210000002;
+
+  static Future<void> scheduleDailyOverview(AppDatabase db, {DateTime? now}) async {
+    if (kIsWeb || !_initialized) return;
+
+    final current = now ?? DateTime.now();
+    final today = DateUtils.dateOnly(current);
+    final tomorrow = today.add(const Duration(days: 1));
+    final morningTime = DateTime(
+      tomorrow.year,
+      tomorrow.month,
+      tomorrow.day,
+      8,
+    );
+    final summaryTime = DateTime(
+      today.year,
+      today.month,
+      today.day,
+      20,
+    ).isAfter(current)
+        ? DateTime(today.year, today.month, today.day, 20)
+        : DateTime(tomorrow.year, tomorrow.month, tomorrow.day, 20);
+
+    final todayTasks = await db.tasksDao.watchTasksForDate(today).first;
+    final tomorrowTasks = await db.tasksDao.watchTasksForDate(tomorrow).first;
+    final todayCompleted = todayTasks
+        .where((task) => task.status == TaskStatus.completed)
+        .length;
+    final tomorrowPending = tomorrowTasks
+        .where((task) => task.status != TaskStatus.completed)
+        .length;
+
+    final summary = SmartNotification.dailySummary(
+      total: todayTasks.length,
+      completed: todayCompleted,
+      pending: todayTasks.length - todayCompleted,
+      scheduledAt: summaryTime,
+    );
+    final morning = SmartNotification.morningPlan(
+      total: tomorrowTasks.length,
+      upcoming: tomorrowPending,
+      scheduledAt: morningTime,
+    );
+
+    await _schedule(
+      id: _dailySummaryId,
+      title: summary.title,
+      body: summary.body,
+      scheduledTime: summary.scheduledAt,
+      payload: '/today',
+      includeTaskActions: false,
+    );
+    await _schedule(
+      id: _morningPlanId,
+      title: morning.title,
+      body: morning.body,
+      scheduledTime: morning.scheduledAt,
+      payload: '/today',
+      includeTaskActions: false,
+    );
+  }
+
   static Future<void> rescheduleTasks(AppDatabase db) async {
     if (kIsWeb || !_initialized) return;
 

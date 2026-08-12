@@ -32,6 +32,7 @@ class _DatabaseBootstrapState extends State<DatabaseBootstrap> {
     await seedDatabaseIfEmpty(_db);
     NotificationService.attachDatabase(_db);
     unawaited(NotificationService.rescheduleTasks(_db));
+    unawaited(NotificationService.scheduleDailyOverview(_db));
   }
 
   @override
