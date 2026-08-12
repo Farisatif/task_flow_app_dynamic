@@ -23,3 +23,4 @@
 - [ ] Add Flutter test coverage for core task, calendar, and habit workflows
 - [x] Add Widget coverage for shared loading, empty, error, and recovery states
 - [ ] Add GitHub Actions verification for formatting, analysis, tests, and debug APK builds (يتطلب صلاحية workflows في GitHub)
+- [x] Raise Android compileSdk to 36 for file picker compatibility and validate Gradle settings
