@@ -23,23 +23,55 @@ class HabitsDao extends DatabaseAccessor<AppDatabase> with _$HabitsDaoMixin {
     return (select(habits)..where((h) => h.isDeleted.equals(false) & h.isArchived.equals(false))).watch();
   }
 
-  /// يبث كل عادة مع حالة آخر 7 أيام محسوبة من habit_logs
+  /// يبث كل عادة مع حالة آخر 7 أيام باستعلام واحد للّوغات، مع مراقبة الجداول معًا.
   Stream<List<HabitWithWeek>> watchAllWithWeek() {
-    return watchAll().asyncMap((habitRows) async {
+    final invalidation = customSelect(
+      'SELECT h.id FROM habits h LEFT JOIN habit_logs l ON l.habit_id = h.id',
+      readsFrom: {habits, habitLogs},
+    ).watch();
+
+    return invalidation.asyncMap((_) async {
+      final habitRows = await (select(habits)
+            ..where((h) => h.isDeleted.equals(false) & h.isArchived.equals(false)))
+          .get();
+      if (habitRows.isEmpty) return <HabitWithWeek>[];
+
       final today = _dateOnly(DateTime.now());
-      final result = <HabitWithWeek>[];
-      for (final h in habitRows) {
-        final week = <bool>[];
-        for (int i = 6; i >= 0; i--) {
-          final day = today.subtract(Duration(days: i));
-          final log = await (select(habitLogs)
-                ..where((l) => l.habitId.equals(h.id) & l.logDate.equals(day)))
-              .getSingleOrNull();
-          week.add(log?.isCompleted ?? false);
+      final start = today.subtract(const Duration(days: 6));
+      final end = today.add(const Duration(days: 1));
+      final ids = habitRows.map((h) => h.id).join(',');
+      final logRows = await customSelect(
+        'SELECT habit_id, log_date, is_completed FROM habit_logs '
+        'WHERE habit_id IN ($ids) AND log_date >= ? AND log_date < ?',
+        variables: [
+          Variable.withDateTime(start),
+          Variable.withDateTime(end),
+        ],
+        readsFrom: {habitLogs},
+      ).get();
+
+      final completedByHabitAndDay = <int, Set<String>>{};
+      for (final row in logRows) {
+        if (row.read<bool>('is_completed')) {
+          completedByHabitAndDay
+              .putIfAbsent(row.read<int>('habit_id'), () => <String>{})
+              .add(row.read<String>('log_date'));
         }
-        result.add(HabitWithWeek(habit: h, last7Days: week));
       }
-      return result;
+
+      return [
+        for (final habit in habitRows)
+          HabitWithWeek(
+            habit: habit,
+            last7Days: [
+              for (int i = 6; i >= 0; i--)
+                completedByHabitAndDay[habit.id]?.contains(
+                      today.subtract(Duration(days: i)).toIso8601String(),
+                    ) ??
+                    false,
+            ],
+          ),
+      ];
     });
   }
 

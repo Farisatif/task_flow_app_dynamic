@@ -97,6 +97,26 @@ class AppDatabase extends _$AppDatabase {
         beforeOpen: (details) async {
           await customStatement('PRAGMA foreign_keys = ON');
           await customStatement('PRAGMA journal_mode = WAL');
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_tasks_date_deleted '
+            'ON tasks(date, is_deleted)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_tasks_project_deleted '
+            'ON tasks(project_id, is_deleted)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_tasks_category_deleted '
+            'ON tasks(category_id, is_deleted)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_reminders_active '
+            'ON reminders(is_active, task_id)',
+          );
+          await customStatement(
+            'CREATE INDEX IF NOT EXISTS idx_habit_logs_habit_date '
+            'ON habit_logs(habit_id, log_date)',
+          );
         },
       );
 }

@@ -75,13 +75,15 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     }
 
     try {
-      final db = context.read<AppDatabase>();
-      _sessionStartedAt = DateTime.now();
-      _sessionId = await db.focusSessionsDao.startSession(
-        drift.FocusSessionsCompanion.insert(
-          startTime: _sessionStartedAt!,
-        ),
-      );
+      if (_sessionId == null) {
+        final db = context.read<AppDatabase>();
+        _sessionStartedAt = DateTime.now();
+        _sessionId = await db.focusSessionsDao.startSession(
+          drift.FocusSessionsCompanion.insert(
+            startTime: _sessionStartedAt!,
+          ),
+        );
+      }
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

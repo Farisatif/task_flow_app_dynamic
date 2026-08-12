@@ -25,19 +25,43 @@ class ProjectsDao extends DatabaseAccessor<AppDatabase> with _$ProjectsDaoMixin 
         .watch();
   }
 
-  /// يبث قائمة المشاريع مع عدد مهامها المنجزة/الكلي، محسوبة مباشرة من جدول tasks
+  /// يبث قائمة المشاريع مع إحصاءاتها باستعلامين ثابتين بدل استعلام لكل مشروع.
   Stream<List<ProjectWithStats>> watchAllWithStats() {
-    final query = select(projects)..where((p) => p.isDeleted.equals(false) & p.isArchived.equals(false));
-    return query.watch().asyncMap((projectRows) async {
-      final result = <ProjectWithStats>[];
-      for (final proj in projectRows) {
-        final allTasks = await (select(tasks)
-              ..where((t) => t.projectId.equals(proj.id) & t.isDeleted.equals(false)))
-            .get();
-        final completed = allTasks.where((t) => t.status == TaskStatus.completed).length;
-        result.add(ProjectWithStats(project: proj, totalTasks: allTasks.length, completedTasks: completed));
-      }
-      return result;
+    return customSelect(
+      'SELECT 1 FROM projects LEFT JOIN tasks ON tasks.project_id = projects.id',
+      readsFrom: {projects, tasks},
+    ).watch().asyncMap((_) async {
+      final projectRows = await (select(projects)
+            ..where((p) => p.isDeleted.equals(false) & p.isArchived.equals(false)))
+          .get();
+      final statsRows = await customSelect(
+        '''
+        SELECT project_id,
+               COUNT(id) AS total_tasks,
+               SUM(CASE WHEN status = ${TaskStatus.completed.index} THEN 1 ELSE 0 END)
+                 AS completed_tasks
+        FROM tasks
+        WHERE is_deleted = 0 AND project_id IS NOT NULL
+        GROUP BY project_id
+        ''',
+        readsFrom: {tasks},
+      ).get();
+      final stats = <int, (int total, int completed)>{
+        for (final row in statsRows)
+          row.read<int>('project_id'): (
+            row.read<int>('total_tasks'),
+            row.read<int>('completed_tasks'),
+          ),
+      };
+
+      return [
+        for (final project in projectRows)
+          ProjectWithStats(
+            project: project,
+            totalTasks: stats[project.id]?.$1 ?? 0,
+            completedTasks: stats[project.id]?.$2 ?? 0,
+          ),
+      ];
     });
   }
 
