@@ -55,6 +55,50 @@ Future<void> seedDatabaseIfEmpty(AppDatabase db) async {
     projectIds[p.$1] = id;
   }
 
+  // --- مهام اليوم (تُستخدم كبيانات بداية قابلة للتعديل والحذف) ---
+  final today = DateTime.now();
+  final day = DateTime(today.year, today.month, today.day);
+  final taskSeed = [
+    (
+      'مراجعة الأولويات',
+      9 * 60,
+      10 * 60,
+      TaskPriority.high,
+      'العمل',
+      'مراجعة المهام المهمة وتحديد ما يجب إنجازه أولًا.',
+    ),
+    (
+      'جلسة قراءة',
+      11 * 60,
+      12 * 60,
+      TaskPriority.medium,
+      'القراءة',
+      'قراءة فصل واحد وتسجيل أبرز الملاحظات.',
+    ),
+    (
+      'تخطيط الغد',
+      18 * 60,
+      18 * 60 + 30,
+      TaskPriority.low,
+      'العمل',
+      'تجهيز قائمة مختصرة لليوم التالي.',
+    ),
+  ];
+  for (final task in taskSeed) {
+    await db.into(db.tasks).insert(
+          TasksCompanion.insert(
+            title: task.$1,
+            notes: Value(task.$6),
+            date: day,
+            startMinutes: task.$2,
+            endMinutes: task.$3,
+            priority: task.$4,
+            categoryId: Value(categoryIds[task.$5]),
+            projectId: Value(projectIds['مشروعي الأول']),
+          ),
+        );
+  }
+
   // --- العادات (اختيارية) ---
   final habitSeed = [
     ('شرب الماء', 0xFF5B9DF9, 'water_drop'),

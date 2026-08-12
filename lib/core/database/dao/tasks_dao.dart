@@ -27,7 +27,9 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
         .watch();
   }
 
-  Stream<Task?> watchById(int id) => (select(tasks)..where((t) => t.id.equals(id))).watchSingleOrNull();
+  Stream<Task?> watchById(int id) =>
+      (select(tasks)..where((t) => t.id.equals(id) & t.isDeleted.equals(false)))
+          .watchSingleOrNull();
 
   Future<List<Task>> getTasksByProject(int projectId) =>
       (select(tasks)..where((t) => t.projectId.equals(projectId) & t.isDeleted.equals(false))).get();

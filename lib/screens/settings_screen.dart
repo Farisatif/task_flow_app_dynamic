@@ -115,13 +115,7 @@ class SettingsScreen extends StatelessWidget {
                   icon: Icons.privacy_tip_outlined,
                   title: 'الخصوصية والأمان',
                   subtitle: 'التحكم في الأمان والخصوصية',
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('هذه الصفحة غير مرتبطة بعد.'),
-                      ),
-                    );
-                  },
+                  onTap: () => _showPrivacyInfo(context),
                 ),
               ],
             ),
@@ -175,6 +169,24 @@ class SettingsScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<void> _showPrivacyInfo(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('الخصوصية والأمان'),
+        content: const Text(
+          'تُخزّن مهامك وبياناتك محليًا على هذا الجهاز عبر قاعدة SQLite. لا تتم مشاركة البيانات مع خدمة خارجية من داخل التطبيق الحالي. استخدم النسخ الاحتياطي بعد ربطه بآلية تصدير فعلية قبل حذف التطبيق أو تغيير الجهاز.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('فهمت'),
+          ),
+        ],
       ),
     );
   }

@@ -50,7 +50,7 @@ class AppBottomNav extends StatelessWidget {
               final item = _items[i];
               final selected = i == currentIndex;
 
-              final activeColor = isDark ? AppColors.primaryLight : AppColors.primary;
+              final activeColor = theme.colorScheme.primary;
               final inactiveColor = isDark
                   ? AppColors.darkTextTertiary
                   : AppColors.lightTextTertiary;

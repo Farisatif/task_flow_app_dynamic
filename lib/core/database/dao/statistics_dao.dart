@@ -61,15 +61,17 @@ class StatisticsDao extends DatabaseAccessor<AppDatabase> with _$StatisticsDaoMi
     final day = DateTime(today.year, today.month, today.day);
     final next = day.add(const Duration(days: 1));
 
-    return (select(tasks)
-          ..where((t) => t.date.isBiggerOrEqualValue(day) & t.date.isSmallerThanValue(next) & t.isDeleted.equals(false)))
+    return (select(tasks)..where((t) => t.isDeleted.equals(false)))
         .watch()
-        .map((taskList) {
+        .map((allTasks) {
+      final taskList = allTasks
+          .where((t) => !t.date.isBefore(day) && t.date.isBefore(next))
+          .toList();
       final total = taskList.length;
       final completed = taskList.where((t) => t.status == TaskStatus.completed).length;
       final inProgress = taskList.where((t) => t.status == TaskStatus.inProgress).length;
       final pending = taskList.where((t) => t.status == TaskStatus.pending).length;
-      final overdue = taskList.where((t) => t.date.isBefore(day) && t.status != TaskStatus.completed).length;
+      final overdue = allTasks.where((t) => t.date.isBefore(day) && t.status != TaskStatus.completed).length;
 
       return TaskStatistics(
         total: total,
@@ -86,15 +88,17 @@ class StatisticsDao extends DatabaseAccessor<AppDatabase> with _$StatisticsDaoMi
     final day = DateTime(startDate.year, startDate.month, startDate.day);
     final end = DateTime(endDate.year, endDate.month, endDate.day).add(const Duration(days: 1));
 
-    return (select(tasks)
-          ..where((t) => t.date.isBiggerOrEqualValue(day) & t.date.isSmallerThanValue(end) & t.isDeleted.equals(false)))
+    return (select(tasks)..where((t) => t.isDeleted.equals(false)))
         .watch()
-        .map((taskList) {
+        .map((allTasks) {
+      final taskList = allTasks
+          .where((t) => !t.date.isBefore(day) && t.date.isBefore(end))
+          .toList();
       final total = taskList.length;
       final completed = taskList.where((t) => t.status == TaskStatus.completed).length;
       final inProgress = taskList.where((t) => t.status == TaskStatus.inProgress).length;
       final pending = taskList.where((t) => t.status == TaskStatus.pending).length;
-      final overdue = taskList.where((t) => t.date.isBefore(day) && t.status != TaskStatus.completed).length;
+      final overdue = allTasks.where((t) => t.date.isBefore(day) && t.status != TaskStatus.completed).length;
 
       return TaskStatistics(
         total: total,
@@ -137,7 +141,11 @@ class StatisticsDao extends DatabaseAccessor<AppDatabase> with _$StatisticsDaoMi
     final day = DateTime(today.year, today.month, today.day);
     final next = day.add(const Duration(days: 1));
 
-    return (select(habits)..where((h) => h.isDeleted.equals(false))).watch().asyncMap((habitList) async {
+    return customSelect(
+      'SELECT 1 FROM habits LEFT JOIN habit_logs ON habit_logs.habit_id = habits.id WHERE habits.is_deleted = 0',
+      readsFrom: {habits, habitLogs},
+    ).watch().asyncMap((_) async {
+      final habitList = await (select(habits)..where((h) => h.isDeleted.equals(false))).get();
       if (habitList.isEmpty) {
         return HabitStatistics(totalHabits: 0, completedToday: 0, completionPercentage: 0.0);
       }
@@ -194,7 +202,7 @@ class StatisticsDao extends DatabaseAccessor<AppDatabase> with _$StatisticsDaoMi
 
         final completedCount = taskList
             .where((t) =>
-                t.date.isAfter(dayToCheck) &&
+                !t.date.isBefore(dayToCheck) &&
                 t.date.isBefore(nextDay) &&
                 t.status == TaskStatus.completed &&
                 !t.isDeleted)
