@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:provider/provider.dart';
@@ -79,7 +78,7 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
         final db = context.read<AppDatabase>();
         _sessionStartedAt = DateTime.now();
         _sessionId = await db.focusSessionsDao.startSession(
-          drift.FocusSessionsCompanion.insert(
+          FocusSessionsCompanion.insert(
             startTime: _sessionStartedAt!,
           ),
         );
