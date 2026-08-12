@@ -12,12 +12,12 @@
 - [x] Create reusable urban loading, empty, and error-state components
 - [x] Improve dashboard loading and error feedback at the app entry point
 - [x] Remove dashboard drag ordering that was not persisted and retain real task completion actions
-- [ ] Improve dashboard navigation and task flow feedback
+- [x] Verify dashboard remains the initial tab and tab navigation replaces routes cleanly
 - [x] Improve reminders loading and error feedback around notification management
 - [x] Improve focus dashboard loading, error, and empty feedback
 - [x] Replace backup simulation with real local snapshot creation, listing, restore, and deletion
-- [ ] Replace attachment metadata-only creation with real file picking and private local storage
+- [x] Replace attachment metadata-only creation with real file picking and private local storage
 - [x] Replace attachment metadata-only creation with real file picking and private local storage
 - [x] Replace the unlinked help placeholder with an in-app usage guide
-- [ ] Replace or clearly scope remaining placeholder functionality
+- [x] Audit remaining visible placeholder and empty callback markers
 - [ ] Add Flutter test coverage for core task, calendar, and habit workflows
