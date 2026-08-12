@@ -28,3 +28,4 @@
 - [x] Replace invalid Gradle afterEvaluate SDK override with Android Components finalizeDsl configuration
 - [x] Remove late root Gradle SDK hooks and replace incompatible file_picker dependency path
 - [x] Switch Gradle Wrapper to the smaller direct binary distribution and extend download timeout
+- [x] Replace unsupported Activity Result API usage with FlutterActivity-compatible document result handling

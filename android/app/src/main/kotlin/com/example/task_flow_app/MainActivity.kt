@@ -1,8 +1,9 @@
 package com.example.task_flow_app
 
+import android.app.Activity
+import android.content.Intent
 import android.net.Uri
 import android.provider.OpenableColumns
-import androidx.activity.result.contract.ActivityResultContracts
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodCall
@@ -11,25 +12,8 @@ import java.io.File
 
 class MainActivity : FlutterActivity() {
     private val documentChannel = "task_flow/document_picker"
+    private val documentPickerRequestCode = 9412
     private var pendingPickResult: MethodChannel.Result? = null
-
-    private val documentPicker = registerForActivityResult(
-        ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        val result = pendingPickResult ?: return@registerForActivityResult
-        pendingPickResult = null
-
-        if (uri == null) {
-            result.success(null)
-            return@registerForActivityResult
-        }
-
-        try {
-            result.success(copyDocumentToAppStorage(uri))
-        } catch (exception: Exception) {
-            result.error("document_copy_failed", exception.message, null)
-        }
-    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -50,7 +34,38 @@ class MainActivity : FlutterActivity() {
         }
 
         pendingPickResult = result
-        documentPicker.launch(arrayOf("*/*"))
+        try {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "*/*"
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            startActivityForResult(intent, documentPickerRequestCode)
+        } catch (exception: Exception) {
+            pendingPickResult = null
+            result.error("document_picker_unavailable", exception.message, null)
+        }
+    }
+
+    @Deprecated("Deprecated in Android API 30, retained for FlutterActivity compatibility")
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != documentPickerRequestCode) return
+
+        val result = pendingPickResult ?: return
+        pendingPickResult = null
+        val uri = data?.data
+
+        if (resultCode != Activity.RESULT_OK || uri == null) {
+            result.success(null)
+            return
+        }
+
+        try {
+            result.success(copyDocumentToAppStorage(uri))
+        } catch (exception: Exception) {
+            result.error("document_copy_failed", exception.message, null)
+        }
     }
 
     private fun copyDocumentToAppStorage(uri: Uri): Map<String, Any> {
