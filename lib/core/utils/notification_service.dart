@@ -390,6 +390,15 @@ class NotificationService {
         requestAlertPermission: true,
         requestBadgePermission: true,
         requestSoundPermission: true,
+        notificationCategories: [
+          DarwinNotificationCategory(
+            'task_reminder',
+            actions: [
+              DarwinNotificationAction.plain(actionDone, 'تم'),
+              DarwinNotificationAction.plain(actionSnooze10, 'غفوة 10 د'),
+            ],
+          ),
+        ],
       );
       final settings = InitializationSettings(android: android, iOS: iOS);
 
@@ -518,6 +527,7 @@ class NotificationService {
         presentAlert: true,
         presentBadge: true,
         presentSound: _soundEnabled,
+        categoryIdentifier: 'task_reminder',
       ),
     );
 
