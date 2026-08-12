@@ -28,18 +28,20 @@ subprojects {
 }
 
 // بعض إضافات Flutter تُنشئ Android library مستقلة وتقرأ compileSdk الافتراضي
-// من Flutter. نطبّق API 36 بعد تقييم كل وحدة كي يطابق متطلبات file_picker
-// وflutter_plugin_android_lifecycle، بدل تعديل تطبيق :app فقط.
+// من Flutter. finalizeDsl يعمل بعد قراءة Android DSL لكل إضافة وقبل إنشاء
+// variants، لذلك يفرض API 36 دون تسجيل hook متأخر على مشروع مكتمل.
 subprojects {
-    afterEvaluate {
-        if (plugins.hasPlugin("com.android.application")) {
-            extensions.configure<com.android.build.api.dsl.ApplicationExtension> {
-                compileSdk = 36
+    pluginManager.withPlugin("com.android.application") {
+        extensions.configure<com.android.build.api.variant.ApplicationAndroidComponentsExtension> {
+            finalizeDsl { extension ->
+                extension.compileSdk = 36
             }
         }
-        if (plugins.hasPlugin("com.android.library")) {
-            extensions.configure<com.android.build.api.dsl.LibraryExtension> {
-                compileSdk = 36
+    }
+    pluginManager.withPlugin("com.android.library") {
+        extensions.configure<com.android.build.api.variant.LibraryAndroidComponentsExtension> {
+            finalizeDsl { extension ->
+                extension.compileSdk = 36
             }
         }
     }
