@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../core/database/database.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/theme_provider.dart';
 import '../core/utils/settings_provider.dart';
@@ -218,13 +219,10 @@ class SettingsScreen extends StatelessWidget {
                   children: colors.map((color) {
                     return InkWell(
                       onTap: () {
+                        context.read<SettingsProvider>().setPrimaryColor(color);
                         Navigator.of(sheetContext).pop();
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'ربط تغيير اللون يحتاج دالة حفظ داخل SettingsProvider.',
-                            ),
-                          ),
+                          const SnackBar(content: Text('تم تغيير لون التطبيق.')),
                         );
                       },
                       borderRadius: BorderRadius.circular(999),
@@ -281,11 +279,19 @@ class SettingsScreen extends StatelessWidget {
       ),
     );
 
-    if (shouldClear == true && context.mounted) {
+    if (shouldClear != true || !context.mounted) return;
+
+    final db = context.read<AppDatabase>();
+    try {
+      await db.clearUserData();
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('ربط مسح البيانات يحتاج دالة واضحة في قاعدة البيانات.'),
-        ),
+        const SnackBar(content: Text('تم مسح جميع البيانات بنجاح.')),
+      );
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('تعذّر مسح البيانات: $error')),
       );
     }
   }

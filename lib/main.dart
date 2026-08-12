@@ -53,13 +53,13 @@ class TaskFlowApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ThemeProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
       ],
-      child: Consumer<ThemeProvider>(
-        builder: (context, themeProvider, _) {
+      child: Consumer2<ThemeProvider, SettingsProvider>(
+        builder: (context, themeProvider, settings, _) {
           return MaterialApp.router(
             title: 'Task Flow - إدارة المهام',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.light,
-            darkTheme: AppTheme.dark,
+            theme: AppTheme.light(primary: settings.primaryColor),
+            darkTheme: AppTheme.dark(primary: settings.primaryColor),
             themeMode: themeProvider.mode,
             routerConfig: appRouter,
             locale: const Locale('ar'),

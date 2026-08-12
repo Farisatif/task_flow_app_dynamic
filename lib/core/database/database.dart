@@ -59,6 +59,26 @@ class AppDatabase extends _$AppDatabase {
   /// منشئ مفيد للاختبارات أو لحقن اتصال مخصص.
   AppDatabase.forTesting(super.connection);
 
+  /// يحذف كل بيانات المستخدم مع الإبقاء على بنية قاعدة البيانات سليمة.
+  /// تُحذف الجداول التابعة أولًا لأن SQLite يعمل مع تفعيل foreign keys.
+  Future<void> clearUserData() async {
+    await transaction(() async {
+      await delete(habitLogs).go();
+      await delete(focusSessions).go();
+      await delete(attachments).go();
+      await delete(reminders).go();
+      await delete(notes).go();
+      await delete(tasks).go();
+      await delete(subGoals).go();
+      await delete(goals).go();
+      await delete(projects).go();
+      await delete(categories).go();
+      await delete(habits).go();
+      await delete(profile).go();
+      await delete(appSettings).go();
+    });
+  }
+
   @override
   int get schemaVersion => 1;
 
