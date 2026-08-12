@@ -6,7 +6,9 @@ import 'package:provider/provider.dart';
 import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../core/theme/app_colors.dart';
+import '../core/utils/attachment_storage_service.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/app_state_view.dart';
 
 IconData _kindIcon(AttachmentKind kind) {
   switch (kind) {
@@ -172,221 +174,43 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
 
     if (shouldDelete == true) {
       await db.attachmentsDao.deleteAttachment(attachment.id);
+      await AttachmentStorageService.deleteStoredFile(attachment.filePath);
     }
   }
 
-  Future<void> _showAddSheet(BuildContext context, AppDatabase db) async {
-    final nameController = TextEditingController();
-    final sizeController = TextEditingController(text: '0');
-    AttachmentKind selectedKind = AttachmentKind.doc;
+  Future<void> _pickAndStoreAttachment(
+    BuildContext context,
+    AppDatabase db,
+  ) async {
+    try {
+      final stored = await AttachmentStorageService.pickAndStore();
+      if (stored == null) return;
 
-    await showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      useSafeArea: true,
-      builder: (sheetContext) {
-        return StatefulBuilder(
-          builder: (context, setSheetState) {
-            final theme = Theme.of(context);
-            final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
-
-            return Container(
-              padding: EdgeInsets.fromLTRB(20, 12, 20, 20 + bottomPadding),
-              decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(28),
-                ),
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Center(
-                      child: Container(
-                        width: 42,
-                        height: 4,
-                        decoration: BoxDecoration(
-                          color: theme.dividerColor.withOpacity(0.35),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Icon(
-                            Icons.upload_file_rounded,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'إضافة مرفق',
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'أضف ملفًا جديدًا وحدد نوعه بسرعة',
-                                style: theme.textTheme.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 18),
-                    TextField(
-                      controller: nameController,
-                      autofocus: true,
-                      textInputAction: TextInputAction.done,
-                      decoration: InputDecoration(
-                        labelText: 'اسم الملف',
-                        hintText: 'مثال: خطة المشروع النهائية',
-                        filled: true,
-                        fillColor: theme.colorScheme.surfaceContainerHighest
-                            .withOpacity(0.35),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<AttachmentKind>(
-                      value: selectedKind,
-                      decoration: InputDecoration(
-                        labelText: 'نوع الملف',
-                        filled: true,
-                        fillColor: theme.colorScheme.surfaceContainerHighest
-                            .withOpacity(0.35),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                      items: AttachmentKind.values
-                          .map(
-                            (kind) => DropdownMenuItem(
-                              value: kind,
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    _kindIcon(kind),
-                                    size: 18,
-                                    color: _kindColor(kind),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Text(_kindLabel(kind)),
-                                ],
-                              ),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (value) {
-                        if (value == null) return;
-                        setSheetState(() => selectedKind = value);
-                      },
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: sizeController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        labelText: 'الحجم بالبايت',
-                        hintText: 'مثال: 2048',
-                        filled: true,
-                        fillColor: theme.colorScheme.surfaceContainerHighest
-                            .withOpacity(0.35),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 18),
-                    _PreviewCard(
-                      name: nameController.text.trim().isEmpty
-                          ? 'معاينة الملف'
-                          : nameController.text.trim(),
-                      kind: selectedKind,
-                    ),
-                    const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.of(sheetContext).pop(),
-                            style: OutlinedButton.styleFrom(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: const Text('إلغاء'),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: FilledButton(
-                            onPressed: () async {
-                              final name = nameController.text.trim();
-                              final size =
-                                  int.tryParse(sizeController.text.trim()) ?? 0;
-
-                              if (name.isEmpty) return;
-
-                              await db.attachmentsDao.insertAttachment(
-                                AttachmentsCompanion.insert(
-                                  name: name,
-                                  kind: selectedKind,
-                                  sizeBytes: Value(size),
-                                ),
-                              );
-
-                              if (!mounted) return;
-                              Navigator.of(sheetContext).pop();
-                            },
-                            style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: const Text('إضافة'),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
+      try {
+        await db.attachmentsDao.insertAttachment(
+          AttachmentsCompanion.insert(
+            name: stored.name,
+            kind: stored.kind,
+            filePath: Value(stored.filePath),
+            sizeBytes: Value(stored.sizeBytes),
+          ),
         );
-      },
-    );
-
-    nameController.dispose();
-    sizeController.dispose();
+      } catch (_) {
+        await AttachmentStorageService.deleteStoredFile(stored.filePath);
+        rethrow;
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تم حفظ «${stored.name}» داخل التطبيق.')),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('تعذر إضافة الملف: $error')),
+        );
+      }
+    }
   }
 
   @override
@@ -399,7 +223,7 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
       showNav: false,
       floatingActionButton: FloatingActionButton.extended(
         backgroundColor: AppColors.primary,
-        onPressed: () => _showAddSheet(context, db),
+        onPressed: () => _pickAndStoreAttachment(context, db),
         icon: const Icon(Icons.upload_file_rounded, color: Colors.white),
         label: const Text(
           'مرفق جديد',
@@ -409,12 +233,14 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
       body: StreamBuilder<List<Attachment>>(
         stream: db.attachmentsDao.watchAll(),
         builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const AppLoadingState(label: 'جارٍ تحميل المرفقات…');
+          }
           if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'حدث خطأ أثناء تحميل المرفقات',
-                style: theme.textTheme.bodyMedium,
-              ),
+            return const AppErrorState(
+              title: 'تعذر تحميل المرفقات',
+              message: 'تعذر الوصول إلى ملفات التطبيق المخزنة حاليًا.',
             );
           }
 
@@ -549,7 +375,7 @@ class _AttachmentsScreenState extends State<AttachmentsScreen> {
               const SizedBox(height: 10),
               if (attachments.isEmpty)
                 _EmptyState(
-                  onAdd: () => _showAddSheet(context, db),
+                  onAdd: () => _pickAndStoreAttachment(context, db),
                   filterKind: _filter.kind,
                 )
               else
