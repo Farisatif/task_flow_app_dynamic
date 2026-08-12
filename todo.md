@@ -22,3 +22,4 @@
 - [x] Audit remaining visible placeholder and empty callback markers
 - [ ] Add Flutter test coverage for core task, calendar, and habit workflows
 - [x] Add Widget coverage for shared loading, empty, error, and recovery states
+- [ ] Add GitHub Actions verification for formatting, analysis, tests, and debug APK builds (يتطلب صلاحية workflows في GitHub)
