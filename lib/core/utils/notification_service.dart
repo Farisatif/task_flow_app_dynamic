@@ -470,6 +470,7 @@ class NotificationService {
       body: body ?? 'حان وقت المهمة: $title',
       scheduledTime: scheduledTime,
       payload: '/task-details/$taskId',
+      includeTaskActions: true,
     );
   }
 
@@ -485,6 +486,7 @@ class NotificationService {
       body: body ?? 'تذكير: $title',
       scheduledTime: scheduledTime,
       payload: '/reminders',
+      includeTaskActions: false,
     );
   }
 
@@ -494,6 +496,7 @@ class NotificationService {
     required String body,
     required DateTime scheduledTime,
     required String payload,
+    required bool includeTaskActions,
   }) async {
     if (kIsWeb || !_initialized || !scheduledTime.isAfter(DateTime.now())) {
       return;
@@ -508,26 +511,28 @@ class NotificationService {
         priority: Priority.high,
         playSound: _soundEnabled,
         enableVibration: true,
-        actions: const [
-          AndroidNotificationAction(
-            actionDone,
-            'تم',
-            showsUserInterface: true,
-            cancelNotification: true,
-          ),
-          AndroidNotificationAction(
-            actionSnooze10,
-            'غفوة 10 د',
-            showsUserInterface: true,
-            cancelNotification: true,
-          ),
-        ],
+        actions: includeTaskActions
+            ? const [
+                AndroidNotificationAction(
+                  actionDone,
+                  'تم',
+                  showsUserInterface: true,
+                  cancelNotification: true,
+                ),
+                AndroidNotificationAction(
+                  actionSnooze10,
+                  'غفوة 10 د',
+                  showsUserInterface: true,
+                  cancelNotification: true,
+                ),
+              ]
+            : const [],
       ),
       iOS: DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: _soundEnabled,
-        categoryIdentifier: 'task_reminder',
+        categoryIdentifier: includeTaskActions ? 'task_reminder' : null,
       ),
     );
 
