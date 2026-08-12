@@ -54,11 +54,37 @@ class _CalendarScreenState extends State<CalendarScreen>
       body: StreamBuilder<List<Task>>(
         stream: db.tasksDao.watchAll(),
         builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
           if (snapshot.hasError) {
             return Center(
-              child: Text(
-                'حدث خطأ أثناء تحميل التقويم',
-                style: theme.textTheme.bodyMedium,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.calendar_month_outlined,
+                      size: 48,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'تعذر تحميل التقويم الآن',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'تحقق من البيانات ثم حاول مرة أخرى.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -90,6 +116,9 @@ class _CalendarScreenState extends State<CalendarScreen>
                 },
                 tasksByDay: tasksByDay,
                 allTasks: allTasks,
+                onPageChanged: (focused) {
+                  setState(() => _focusedDay = focused);
+                },
               );
 
               final agenda = _AgendaCard(
@@ -98,16 +127,26 @@ class _CalendarScreenState extends State<CalendarScreen>
                 completedCount: selectedCompleted,
                 pendingCount: selectedPending,
                 onToggleStatus: (task, checked) async {
-                  await db.tasksDao.setStatus(
-                    task.id,
-                    checked == true
-                        ? TaskStatus.completed
-                        : TaskStatus.pending,
-                  );
+                  try {
+                    await db.tasksDao.setStatus(
+                      task.id,
+                      checked == true
+                          ? TaskStatus.completed
+                          : TaskStatus.pending,
+                    );
+                  } catch (_) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('تعذر تحديث حالة المهمة، حاول مرة أخرى.'),
+                      ),
+                    );
+                  }
                 },
                 onOpenDetails: (task) {
                   context.push('/task-details/${task.id}');
                 },
+                onAdd: () => context.push('/task-form'),
               );
 
               if (isWide) {
@@ -166,7 +205,7 @@ class _CalendarScreenState extends State<CalendarScreen>
     }
 
     for (final entry in map.entries) {
-      entry.value.sort((a, b) => a.date.compareTo(b.date));
+      entry.value.sort((a, b) => a.startMinutes.compareTo(b.startMinutes));
     }
 
     return map;
@@ -181,6 +220,7 @@ class _CalendarCard extends StatelessWidget {
   final void Function(DateTime selected, DateTime focused) onDaySelected;
   final LinkedHashMap<DateTime, List<Task>> tasksByDay;
   final List<Task> allTasks;
+  final ValueChanged<DateTime> onPageChanged;
 
   const _CalendarCard({
     required this.focusedDay,
@@ -188,6 +228,7 @@ class _CalendarCard extends StatelessWidget {
     required this.onDaySelected,
     required this.tasksByDay,
     required this.allTasks,
+    required this.onPageChanged,
   });
 
   @override
@@ -228,10 +269,11 @@ class _CalendarCard extends StatelessWidget {
                 key: const PageStorageKey('task-calendar'),
                 locale: 'ar',
                 firstDay: DateTime.utc(2020, 1, 1),
-                lastDay: DateTime.utc(2030, 12, 31),
+                lastDay: DateTime.utc(DateTime.now().year + 10, 12, 31),
                 focusedDay: focusedDay,
                 selectedDayPredicate: (day) => isSameDay(selectedDay, day),
                 onDaySelected: onDaySelected,
+                onPageChanged: onPageChanged,
                 eventLoader: (day) {
                   final key = DateTime(day.year, day.month, day.day);
                   return tasksByDay[key] ?? const [];
@@ -298,6 +340,7 @@ class _AgendaCard extends StatelessWidget {
   final int pendingCount;
   final Future<void> Function(Task task, bool? checked) onToggleStatus;
   final void Function(Task task) onOpenDetails;
+  final VoidCallback onAdd;
 
   const _AgendaCard({
     required this.selectedDay,
@@ -306,6 +349,7 @@ class _AgendaCard extends StatelessWidget {
     required this.pendingCount,
     required this.onToggleStatus,
     required this.onOpenDetails,
+    required this.onAdd,
   });
 
   @override
@@ -366,7 +410,7 @@ class _AgendaCard extends StatelessWidget {
             const SizedBox(height: 16),
 
             if (selectedTasks.isEmpty)
-              _EmptyAgenda(onAdd: () {})
+              _EmptyAgenda(onAdd: onAdd)
             else
               ListView.separated(
                 shrinkWrap: true,

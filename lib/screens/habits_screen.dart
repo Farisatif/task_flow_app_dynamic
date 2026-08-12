@@ -49,10 +49,11 @@ class _HabitsScreenState extends State<HabitsScreen> {
       final matchesSearch = query.isEmpty || title.contains(query);
 
       final doneCount = hw.doneCount;
+      final target = hw.habit.targetDaysPerWeek.clamp(1, 7).toInt();
       final matchesFilter = switch (_selectedFilter) {
         _HabitFilter.all => true,
-        _HabitFilter.active => doneCount < 7,
-        _HabitFilter.completed => doneCount == 7,
+        _HabitFilter.active => doneCount < target,
+        _HabitFilter.completed => doneCount >= target,
       };
 
       return matchesSearch && matchesFilter;
@@ -79,16 +80,61 @@ class _HabitsScreenState extends State<HabitsScreen> {
       body: StreamBuilder<List<HabitWithWeek>>(
         stream: db.habitsDao.watchAllWithWeek(),
         builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.sentiment_dissatisfied_outlined,
+                      size: 48,
+                      color: theme.colorScheme.primary,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'تعذر تحميل العادات الآن',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'حاول العودة للشاشة لاحقًا، وستبقى بياناتك المحلية كما هي.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
           final habits = snapshot.data ?? [];
           final filteredHabits = _applyFilters(habits);
 
           final total = habits.length;
-          final completed = habits.where((h) => h.doneCount == 7).length;
+          final completed = habits
+              .where(
+                (h) =>
+                    h.doneCount >= h.habit.targetDaysPerWeek.clamp(1, 7).toInt(),
+              )
+              .length;
           final active = total - completed;
           final overallProgress = total == 0
               ? 0.0
               : habits
-                      .map((h) => h.doneCount / 7.0)
+                      .map(
+                        (h) {
+                          final target =
+                              h.habit.targetDaysPerWeek.clamp(1, 7).toInt();
+                          return (h.doneCount / target).clamp(0.0, 1.0).toDouble();
+                        },
+                      )
                       .fold<double>(0.0, (a, b) => a + b) /
                   total;
 
@@ -384,7 +430,7 @@ class _HabitsScreenState extends State<HabitsScreen> {
                                     ),
                                   );
 
-                                  if (!mounted) return;
+                                  if (!sheetContext.mounted) return;
                                   Navigator.of(sheetContext).pop();
                                 },
                                 child: const Text('إضافة'),
@@ -722,8 +768,9 @@ class _HabitCard extends StatelessWidget {
     final icon = iconFromName(habit.iconName);
     final today = DateTime.now();
     final doneCount = habitWithWeek.doneCount;
-    final progress = doneCount / 7.0;
-    final isCompleted = doneCount == 7;
+    final targetDays = habit.targetDaysPerWeek.clamp(1, 7).toInt();
+    final progress = (doneCount / targetDays).clamp(0.0, 1.0).toDouble();
+    final isCompleted = doneCount >= targetDays;
 
     return Dismissible(
       key: ValueKey('habit-${habit.id}'),
@@ -743,7 +790,18 @@ class _HabitCard extends StatelessWidget {
       confirmDismiss: (_) =>
           context.findAncestorStateOfType<_HabitsScreenState>()!
               ._confirmDelete(context, 'حذف العادة "${habit.title}"؟'),
-      onDismissed: (_) => db.habitsDao.softDelete(habit.id),
+      onDismissed: (_) async {
+        try {
+          await db.habitsDao.softDelete(habit.id);
+        } catch (_) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تعذر حذف العادة، حاول مرة أخرى.'),
+            ),
+          );
+        }
+      },
       child: Container(
         decoration: BoxDecoration(
           color: theme.cardColor,
@@ -802,7 +860,7 @@ class _HabitCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    '$doneCount/7',
+                    '$doneCount/$targetDays',
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: color,
                       fontWeight: FontWeight.w800,
@@ -843,12 +901,22 @@ class _HabitCard extends StatelessWidget {
                 children: List.generate(7, (i) {
                   final dayDate = DateTime(today.year, today.month, today.day)
                       .subtract(Duration(days: 6 - i));
-                  final done = habitWithWeek.last7Days[i];
+                  final done = i < habitWithWeek.last7Days.length &&
+                      habitWithWeek.last7Days[i];
 
                   return InkWell(
                     borderRadius: BorderRadius.circular(999),
                     onTap: () async {
-                      await db.habitsDao.toggleDay(habit.id, dayDate, !done);
+                      try {
+                        await db.habitsDao.toggleDay(habit.id, dayDate, !done);
+                      } catch (_) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('تعذر تحديث العادة، حاول مرة أخرى.'),
+                          ),
+                        );
+                      }
                     },
                     child: Column(
                       children: [
