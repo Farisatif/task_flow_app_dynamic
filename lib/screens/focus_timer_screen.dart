@@ -1,9 +1,11 @@
 import 'dart:async';
 
+import 'package:drift/drift.dart';
 import 'package:flutter/material.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:provider/provider.dart';
 
+import '../core/database/database.dart';
 import '../core/utils/settings_provider.dart';
 import '../core/utils/sound_service.dart';
 import '../widgets/app_scaffold.dart';
@@ -25,6 +27,8 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
   Timer? _timer;
   bool _running = false;
   int _selectedMinutes = _defaultMinutes;
+  int? _sessionId;
+  DateTime? _sessionStartedAt;
 
   @override
   void initState() {
@@ -63,17 +67,34 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     });
   }
 
-  void _start() {
+  Future<void> _start() async {
     if (_running) return;
 
     if (_remainingSeconds <= 0) {
       _remainingSeconds = _totalSeconds;
     }
 
+    try {
+      final db = context.read<AppDatabase>();
+      _sessionStartedAt = DateTime.now();
+      _sessionId = await db.focusSessionsDao.startSession(
+        FocusSessionsCompanion.insert(
+          startTime: _sessionStartedAt!,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('تعذر تسجيل جلسة التركيز.')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
     setState(() => _running = true);
 
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) async {
       if (!mounted) {
         timer.cancel();
         return;
@@ -85,6 +106,16 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
           _remainingSeconds = 0;
           _running = false;
         });
+
+        final sessionId = _sessionId;
+        if (sessionId != null) {
+          await context.read<AppDatabase>().focusSessionsDao.completeSession(
+                sessionId,
+                _totalSeconds,
+              );
+          _sessionId = null;
+          _sessionStartedAt = null;
+        }
 
         SoundService.playNotification(context);
 
@@ -116,16 +147,26 @@ class _FocusTimerScreenState extends State<FocusTimerScreen>
     setState(() => _running = false);
   }
 
-  void _toggle() {
+  Future<void> _toggle() async {
     if (_running) {
       _pause();
     } else {
-      _start();
+      await _start();
     }
   }
 
-  void _reset() {
+  Future<void> _reset() async {
     _timer?.cancel();
+    final sessionId = _sessionId;
+    if (sessionId != null) {
+      await context.read<AppDatabase>().focusSessionsDao.abandonSession(
+            sessionId,
+            _totalSeconds - _remainingSeconds,
+          );
+      _sessionId = null;
+      _sessionStartedAt = null;
+    }
+    if (!mounted) return;
     setState(() {
       _running = false;
       _remainingSeconds = _totalSeconds;

@@ -25,8 +25,23 @@ class FocusSessionsDao extends DatabaseAccessor<AppDatabase> with _$FocusSession
 
   Future<int> startSession(FocusSessionsCompanion entry) => into(focusSessions).insert(entry);
 
-  Future<int> completeSession(int id, int durationSeconds) => (update(focusSessions)..where((f) => f.id.equals(id)))
-      .write(FocusSessionsCompanion(endTime: Value(DateTime.now()), durationSeconds: Value(durationSeconds), isCompleted: const Value(true)));
+  Future<int> completeSession(int id, int durationSeconds) =>
+      (update(focusSessions)..where((f) => f.id.equals(id))).write(
+        FocusSessionsCompanion(
+          endTime: Value(DateTime.now()),
+          durationSeconds: Value(durationSeconds),
+          isCompleted: const Value(true),
+        ),
+      );
+
+  Future<int> abandonSession(int id, int durationSeconds) =>
+      (update(focusSessions)..where((f) => f.id.equals(id))).write(
+        FocusSessionsCompanion(
+          endTime: Value(DateTime.now()),
+          durationSeconds: Value(durationSeconds),
+          isCompleted: const Value(false),
+        ),
+      );
 
   /// إجمالي دقائق التركيز المكتملة اليوم
   Future<int> totalMinutesToday() async {

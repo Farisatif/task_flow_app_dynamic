@@ -3,8 +3,6 @@ import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/task_extensions.dart';
-import '../core/theme/app_colors.dart';
-import '../core/utils/task_extensions.dart';
 import 'task_action_menu.dart';
 
 class TaskTile extends StatelessWidget {

@@ -33,10 +33,28 @@ final GoRouter appRouter = GoRouter(
   initialLocation: '/',
   errorBuilder: (context, state) {
     return Scaffold(
+      appBar: AppBar(title: const Text('تعذر فتح الصفحة')),
       body: Center(
-        child: Text(
-          'الصفحة غير موجودة',
-          style: Theme.of(context).textTheme.titleMedium,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.link_off_rounded, size: 56),
+              const SizedBox(height: 16),
+              Text(
+                'الصفحة غير موجودة أو لم تعد متاحة.',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () => context.go('/'),
+                icon: const Icon(Icons.home_outlined),
+                label: const Text('العودة للرئيسية'),
+              ),
+            ],
+          ),
         ),
       ),
     );
