@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'database.dart';
 import 'seed_data.dart';
+import '../utils/notification_service.dart';
 
 /// يفتح قاعدة البيانات المحلية مرة واحدة عند إقلاع التطبيق، يبذرها ببيانات
 /// تجريبية إن كانت فارغة، ثم يوفرها (Provider) لبقية شجرة الواجهات.
@@ -22,7 +25,12 @@ class _DatabaseBootstrapState extends State<DatabaseBootstrap> {
   void initState() {
     super.initState();
     _db = AppDatabase();
-    _initFuture = seedDatabaseIfEmpty(_db);
+    _initFuture = _initialize();
+  }
+
+  Future<void> _initialize() async {
+    await seedDatabaseIfEmpty(_db);
+    unawaited(NotificationService.rescheduleTasks(_db));
   }
 
   @override

@@ -11,6 +11,7 @@ class SoundService {
     final settings = context.read<SettingsProvider>();
     if (!settings.soundEnabled) return;
 
+    await SystemSound.play(SystemSoundType.click);
     if (settings.hapticEnabled) {
       await HapticFeedback.mediumImpact();
     }
@@ -20,6 +21,7 @@ class SoundService {
     final settings = context.read<SettingsProvider>();
     if (!settings.soundEnabled) return;
 
+    await SystemSound.play(SystemSoundType.click);
     if (settings.hapticEnabled) {
       await HapticFeedback.lightImpact();
     }
@@ -29,6 +31,7 @@ class SoundService {
     final settings = context.read<SettingsProvider>();
     if (!settings.soundEnabled) return;
 
+    await SystemSound.play(SystemSoundType.alert);
     if (settings.hapticEnabled) {
       await HapticFeedback.heavyImpact();
     }

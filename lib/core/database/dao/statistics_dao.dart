@@ -170,21 +170,23 @@ class StatisticsDao extends DatabaseAccessor<AppDatabase> with _$StatisticsDaoMi
     });
   }
 
-  /// احصائيات المهام حسب الفئة
+  /// احصائيات المهام حسب الفئة، باستعلام تجميعي واحد لتقليل كلفة القراءة.
   Stream<Map<String, int>> watchTaskCountByCategory() {
-    return (select(tasks)..where((t) => t.isDeleted.equals(false))).watch().asyncMap((taskList) async {
-      final Map<String, int> categoryMap = {};
-
-      for (final task in taskList) {
-        if (task.categoryId != null) {
-          final category = await (select(categories)..where((c) => c.id.equals(task.categoryId!))).getSingleOrNull();
-          if (category != null) {
-            categoryMap[category.name] = (categoryMap[category.name] ?? 0) + 1;
-          }
-        }
-      }
-
-      return categoryMap;
+    return customSelect(
+      '''
+      SELECT categories.name AS category_name, COUNT(tasks.id) AS task_count
+      FROM tasks
+      INNER JOIN categories ON categories.id = tasks.category_id
+      WHERE tasks.is_deleted = 0 AND categories.is_deleted = 0
+      GROUP BY categories.id, categories.name
+      ORDER BY task_count DESC
+      ''',
+      readsFrom: {tasks, categories},
+    ).watch().map((rows) {
+      return {
+        for (final row in rows)
+          row.read<String>('category_name'): row.read<int>('task_count'),
+      };
     });
   }
 

@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../core/theme/app_colors.dart';
+import '../core/utils/notification_service.dart';
 import '../core/utils/sound_service.dart';
 import '../core/utils/time_utils.dart';
 
@@ -88,7 +89,7 @@ class _QuickAddModalState extends State<QuickAddModal> {
     try {
       final db = context.read<AppDatabase>();
 
-      await db.tasksDao.insertTask(
+      final taskId = await db.tasksDao.insertTask(
         TasksCompanion.insert(
           title: title,
           date: _date,
@@ -103,7 +104,19 @@ class _QuickAddModalState extends State<QuickAddModal> {
         ),
       );
 
-      SoundService.playTaskCreate(context);
+      await NotificationService.scheduleTaskReminder(
+        taskId: taskId,
+        title: title,
+        scheduledTime: DateTime(
+          _date.year,
+          _date.month,
+          _date.day,
+          _startTime.hour,
+          _startTime.minute,
+        ),
+        body: 'حان وقت المهمة: $title',
+      );
+      await SoundService.playTaskCreate(context);
 
       if (!mounted) return;
       Navigator.of(context).pop();

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/database/database.dart';
+import '../core/utils/notification_service.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/app_scaffold.dart';
 
@@ -209,12 +210,31 @@ class _RemindersScreenState extends State<RemindersScreen> {
                           context,
                           reminder.title,
                         ),
-                        onDismissed: (_) =>
-                            db.remindersDao.deleteReminder(reminder.id),
+                        onDismissed: (_) {
+                          NotificationService.cancelUserReminder(reminder.id);
+                          db.remindersDao.deleteReminder(reminder.id);
+                        },
                         child: _ReminderCard(
                           reminder: reminder,
-                          onToggle: (value) =>
-                              db.remindersDao.setActive(reminder.id, value),
+                          onToggle: (value) async {
+                            await db.remindersDao.setActive(reminder.id, value);
+                            if (value) {
+                              final scheduledTime = _parseNextReminderTime(
+                                reminder.timeLabel,
+                              );
+                              if (scheduledTime != null) {
+                                await NotificationService.scheduleUserReminder(
+                                  reminderId: reminder.id,
+                                  title: reminder.title,
+                                  scheduledTime: scheduledTime,
+                                );
+                              }
+                            } else {
+                              await NotificationService.cancelUserReminder(
+                                reminder.id,
+                              );
+                            }
+                          },
                         ),
                       ),
                     ),
@@ -251,6 +271,26 @@ class _RemindersScreenState extends State<RemindersScreen> {
         ],
       ),
     );
+  }
+
+  DateTime? _parseNextReminderTime(String label) {
+    final match = RegExp(r'(\d{1,2}):(\d{2})').firstMatch(label);
+    if (match == null) return null;
+
+    var hour = int.tryParse(match.group(1)!) ?? 0;
+    final minute = int.tryParse(match.group(2)!) ?? 0;
+    final isPm = label.contains('م');
+    final isAm = label.contains('ص');
+    if (isPm && hour < 12) hour += 12;
+    if (isAm && hour == 12) hour = 0;
+    if (hour > 23 || minute > 59) return null;
+
+    final now = DateTime.now();
+    var scheduled = DateTime(now.year, now.month, now.day, hour, minute);
+    if (!scheduled.isAfter(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+    return scheduled;
   }
 
   Future<void> _showAddBottomSheet(
@@ -396,13 +436,24 @@ class _RemindersScreenState extends State<RemindersScreen> {
 
                             if (title.isEmpty) return;
 
-                            await db.remindersDao.insertReminder(
+                            final reminderId =
+                                await db.remindersDao.insertReminder(
                               RemindersCompanion.insert(
                                 title: title,
                                 timeLabel:
                                     timeLabel.isEmpty ? 'بدون توقيت' : timeLabel,
                               ),
                             );
+
+                            final scheduledTime =
+                                _parseNextReminderTime(timeLabel);
+                            if (scheduledTime != null) {
+                              await NotificationService.scheduleUserReminder(
+                                reminderId: reminderId,
+                                title: title,
+                                scheduledTime: scheduledTime,
+                              );
+                            }
 
                             if (!mounted) return;
                             Navigator.of(sheetContext).pop();

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'notification_service.dart';
+
 class SettingsProvider extends ChangeNotifier {
   static const Color _defaultPrimaryColor = Color(0xFF7B6FF0);
 
@@ -14,6 +16,7 @@ class SettingsProvider extends ChangeNotifier {
   void setSoundEnabled(bool value) {
     if (_soundEnabled == value) return;
     _soundEnabled = value;
+    NotificationService.setSoundEnabled(value);
     notifyListeners();
   }
 
@@ -31,6 +34,7 @@ class SettingsProvider extends ChangeNotifier {
 
   void reset() {
     _soundEnabled = true;
+    NotificationService.setSoundEnabled(true);
     _hapticEnabled = true;
     _primaryColor = _defaultPrimaryColor;
     notifyListeners();

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../core/database/database.dart';
 import '../core/theme/app_colors.dart';
+import '../core/utils/notification_service.dart';
 import '../core/theme/theme_provider.dart';
 import '../core/utils/settings_provider.dart';
 import '../widgets/app_scaffold.dart';
@@ -295,6 +296,7 @@ class SettingsScreen extends StatelessWidget {
 
     final db = context.read<AppDatabase>();
     try {
+      await NotificationService.cancelAll();
       await db.clearUserData();
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

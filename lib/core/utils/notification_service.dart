@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
 
 import '../database/database.dart';
 import '../database/tables.dart';
@@ -348,12 +352,63 @@ class SmartNotificationEngine {
 class NotificationService {
   NotificationService._();
 
+  static final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
+  static const int _taskIdOffset = 100000;
+  static const String _channelId = 'task_reminders';
+  static bool _initialized = false;
+  static bool _soundEnabled = true;
+
+  static void setSoundEnabled(bool enabled) {
+    _soundEnabled = enabled;
+  }
+
   static Future<void> initialize({ValueChanged<String?>? onTap}) async {
-    if (kDebugMode) {
-      debugPrint('NotificationService initialized');
-    }
-    if (onTap != null && kDebugMode) {
-      debugPrint('Notification tap callback registered');
+    if (kIsWeb || _initialized) return;
+
+    try {
+      tz_data.initializeTimeZones();
+      final localTimezone = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(localTimezone));
+
+      const android = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const iOS = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      final settings = InitializationSettings(android: android, iOS: iOS);
+
+      await _plugin.initialize(
+        settings,
+        onDidReceiveNotificationResponse: (response) {
+          onTap?.call(response.payload);
+        },
+      );
+
+      final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      await androidPlugin?.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _channelId,
+          'تذكيرات المهام',
+          description: 'إشعارات مواعيد المهام والتذكيرات الشخصية',
+          importance: Importance.high,
+          playSound: true,
+        ),
+      );
+      await androidPlugin?.requestNotificationsPermission();
+      await _plugin
+          .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(alert: true, badge: true, sound: true);
+
+      _initialized = true;
+      if (kDebugMode) debugPrint('NotificationService initialized');
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('NotificationService initialization failed: $error');
+        debugPrintStack(stackTrace: stackTrace);
+      }
     }
   }
 
@@ -382,26 +437,132 @@ class NotificationService {
     required DateTime scheduledTime,
     String? body,
   }) async {
-    if (kDebugMode) {
-      debugPrint(
-        'Scheduled reminder -> taskId: $taskId, title: $title, time: $scheduledTime, body: $body',
+    await _schedule(
+      id: _taskIdOffset + taskId,
+      title: title,
+      body: body ?? 'حان وقت المهمة: $title',
+      scheduledTime: scheduledTime,
+      payload: '/task-details/$taskId',
+    );
+  }
+
+  static Future<void> scheduleUserReminder({
+    required int reminderId,
+    required String title,
+    required DateTime scheduledTime,
+    String? body,
+  }) async {
+    await _schedule(
+      id: reminderId,
+      title: title,
+      body: body ?? 'تذكير: $title',
+      scheduledTime: scheduledTime,
+      payload: '/reminders',
+    );
+  }
+
+  static Future<void> _schedule({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledTime,
+    required String payload,
+  }) async {
+    if (kIsWeb || !_initialized || !scheduledTime.isAfter(DateTime.now())) {
+      return;
+    }
+
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        _channelId,
+        'تذكيرات المهام',
+        channelDescription: 'إشعارات مواعيد المهام والتذكيرات الشخصية',
+        importance: Importance.high,
+        priority: Priority.high,
+        playSound: _soundEnabled,
+        enableVibration: true,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: _soundEnabled,
+      ),
+    );
+
+    await _plugin.zonedSchedule(
+      id,
+      title,
+      body,
+      tz.TZDateTime.from(scheduledTime, tz.local),
+      details,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      payload: payload,
+    );
+  }
+
+  static Future<void> rescheduleTasks(AppDatabase db) async {
+    if (kIsWeb || !_initialized) return;
+
+    final tasks = await db.tasksDao.watchAll().first;
+    for (final task in tasks) {
+      if (task.status == TaskStatus.completed || task.isDeleted) {
+        await cancelReminder(task.id);
+        continue;
+      }
+      final scheduledTime = DateTime(
+        task.date.year,
+        task.date.month,
+        task.date.day,
+        task.startMinutes ~/ 60,
+        task.startMinutes % 60,
+      );
+      await scheduleTaskReminder(
+        taskId: task.id,
+        title: task.title,
+        scheduledTime: scheduledTime,
       );
     }
   }
 
   static Future<void> cancelReminder(int taskId) async {
-    if (kDebugMode) {
-      debugPrint('Canceled reminder -> taskId: $taskId');
-    }
+    if (kIsWeb || !_initialized) return;
+    await _plugin.cancel(_taskIdOffset + taskId);
+  }
+
+  static Future<void> cancelUserReminder(int reminderId) async {
+    if (kIsWeb || !_initialized) return;
+    await _plugin.cancel(reminderId);
+  }
+
+  static Future<void> cancelAll() async {
+    if (kIsWeb || !_initialized) return;
+    await _plugin.cancelAll();
   }
 
   static Future<void> showInstantNotification(
     String title,
     String body,
   ) async {
-    if (kDebugMode) {
-      debugPrint('Instant notification -> $title | $body');
-    }
+    if (kIsWeb || !_initialized) return;
+    final details = NotificationDetails(
+      android: AndroidNotificationDetails(
+        _channelId,
+        'تذكيرات المهام',
+        channelDescription: 'إشعارات مواعيد المهام والتذكيرات الشخصية',
+        importance: Importance.high,
+        priority: Priority.high,
+        playSound: _soundEnabled,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: _soundEnabled,
+      ),
+    );
+    await _plugin.show(DateTime.now().millisecondsSinceEpoch % 2147483647,
+        title, body, details);
   }
 
   static String buildSummaryText(List<Task> tasks) {
