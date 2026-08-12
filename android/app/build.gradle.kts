@@ -6,8 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.task_flow_app"
-    // file_picker يعتمد flutter_plugin_android_lifecycle الذي يتطلب Android API 36.
-    // لا يغير compileSdk وحده سلوك وقت التشغيل أو حد الأجهزة الأدنى.
+    // نستخدم Android API 36؛ لا يغير compileSdk وحده سلوك وقت التشغيل أو حد الأجهزة الأدنى.
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 

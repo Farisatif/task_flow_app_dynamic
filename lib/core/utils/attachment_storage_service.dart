@@ -1,8 +1,6 @@
 import 'dart:io';
 
-import 'package:file_picker/file_picker.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+import 'package:flutter/services.dart';
 
 import '../database/tables.dart';
 
@@ -23,35 +21,31 @@ class StoredAttachment {
 /// ينسخ الملف المختار إلى مساحة التطبيق حتى لا يعتمد المرفق على URI مؤقت أو
 /// صلاحية قد يسحبها نظام التشغيل بعد اختيار الملف.
 class AttachmentStorageService {
+  static const _documentChannel = MethodChannel('task_flow/document_picker');
+
   static Future<StoredAttachment?> pickAndStore() async {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: false,
-      withData: true,
-      type: FileType.any,
-    );
-    if (result == null || result.files.isEmpty) return null;
-
-    final selected = result.files.single;
-    final directory = await _attachmentsDirectory();
-    final fileName = _safeFileName(selected.name);
-    final target = File(
-      p.join(directory.path, '${DateTime.now().microsecondsSinceEpoch}_$fileName'),
-    );
-
-    if (selected.path != null && selected.path!.isNotEmpty) {
-      await File(selected.path!).copy(target.path);
-    } else if (selected.bytes != null) {
-      await target.writeAsBytes(selected.bytes!, flush: true);
-    } else {
-      throw StateError('تعذر الوصول إلى محتوى الملف المحدد.');
+    if (!Platform.isAndroid) {
+      throw UnsupportedError('اختيار المستندات متاح حاليًا على Android فقط.');
     }
 
-    final size = await target.length();
+    final result = await _documentChannel
+        .invokeMethod<Map<dynamic, dynamic>>('pickAndStoreDocument');
+    if (result == null) return null;
+
+    final filePath = result['path'] as String?;
+    final fileName = result['name'] as String?;
+    if (filePath == null || filePath.isEmpty || fileName == null || fileName.isEmpty) {
+      throw StateError('لم تُرجع أداة اختيار المستندات بيانات ملف صالحة.');
+    }
+
+    final rawSize = result['sizeBytes'];
+    final size = rawSize is num ? rawSize.toInt() : 0;
+    final mimeType = result['mimeType'] as String? ?? '';
     return StoredAttachment(
-      name: selected.name,
-      filePath: target.path,
+      name: fileName,
+      filePath: filePath,
       sizeBytes: size,
-      kind: _detectKind(selected.extension ?? p.extension(selected.name)),
+      kind: _detectKind(_extensionFor(fileName), mimeType),
     );
   }
 
@@ -69,22 +63,16 @@ class AttachmentStorageService {
     return File(filePath).exists();
   }
 
-  static Future<Directory> _attachmentsDirectory() async {
-    final documents = await getApplicationDocumentsDirectory();
-    final directory = Directory(p.join(documents.path, 'attachments'));
-    if (!await directory.exists()) {
-      await directory.create(recursive: true);
-    }
-    return directory;
+  static String _extensionFor(String fileName) {
+    final lastDot = fileName.lastIndexOf('.');
+    return lastDot >= 0 ? fileName.substring(lastDot + 1) : '';
   }
 
-  static String _safeFileName(String value) {
-    final cleaned = value.replaceAll(RegExp(r'[^\w.\-\s]'), '_').trim();
-    return cleaned.isEmpty ? 'attachment' : cleaned;
-  }
+  static AttachmentKind _detectKind(String extension, String mimeType) {
+    if (mimeType.startsWith('image/')) return AttachmentKind.image;
+    if (mimeType == 'application/pdf') return AttachmentKind.pdf;
 
-  static AttachmentKind _detectKind(String extension) {
-    switch (extension.toLowerCase().replaceFirst('.', '')) {
+    switch (extension.toLowerCase()) {
       case 'jpg':
       case 'jpeg':
       case 'png':
