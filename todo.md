@@ -21,3 +21,4 @@
 - [x] Replace the unlinked help placeholder with an in-app usage guide
 - [x] Audit remaining visible placeholder and empty callback markers
 - [ ] Add Flutter test coverage for core task, calendar, and habit workflows
+- [x] Add Widget coverage for shared loading, empty, error, and recovery states
