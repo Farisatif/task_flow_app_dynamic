@@ -12,7 +12,7 @@ class AppBottomNav extends StatelessWidget {
   });
 
   static const _items = [
-    ('/', Icons.home_outlined, Icons.home_rounded, 'الرئيسية'),
+    ('/', Icons.dashboard_outlined, Icons.dashboard_rounded, 'لوحة التحكم'),
     ('/today', Icons.today_outlined, Icons.today_rounded, 'اليوم'),
     ('/tasks', Icons.checklist_outlined, Icons.checklist_rounded, 'المهام'),
     ('/statistics', Icons.pie_chart_outline, Icons.pie_chart_rounded, 'الإحصائيات'),

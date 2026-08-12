@@ -300,7 +300,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                       TextFormField(
                         controller: _titleController,
                         textInputAction: TextInputAction.next,
-                        onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
                           labelText: 'عنوان المهمة',
                           hintText: 'مثال: مراجعة واجهة التطبيق',
@@ -321,7 +320,6 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                       TextFormField(
                         controller: _notesController,
                         maxLines: 4,
-                        onChanged: (_) => setState(() {}),
                         decoration: InputDecoration(
                           labelText: 'ملاحظات (اختياري)',
                           hintText: 'أي تفاصيل إضافية تساعدك لاحقًا',

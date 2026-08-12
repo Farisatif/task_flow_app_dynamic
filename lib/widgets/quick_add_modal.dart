@@ -45,18 +45,12 @@ class _QuickAddModalState extends State<QuickAddModal> {
     _date = DateUtils.dateOnly(now);
     _startTime = TimeOfDay.fromDateTime(now);
     _endTime = _addHours(_startTime, 1);
-    _titleController.addListener(_onTitleChanged);
   }
 
   @override
   void dispose() {
-    _titleController.removeListener(_onTitleChanged);
     _titleController.dispose();
     super.dispose();
-  }
-
-  void _onTitleChanged() {
-    if (mounted) setState(() {});
   }
 
   TimeOfDay _addHours(TimeOfDay time, int hours) {
@@ -350,17 +344,20 @@ class _QuickAddModalState extends State<QuickAddModal> {
                   onSelected: (id) => setState(() => _categoryId = id),
                 ),
                 const SizedBox(height: 18),
-                _PreviewCard(
-                  title: _titleController.text.trim().isEmpty
-                      ? 'معاينة المهمة'
-                      : _titleController.text.trim(),
-                  dateLabel:
-                      intl.DateFormat('EEEE، d MMMM', 'ar').format(_date),
-                  timeLabel:
-                      '${TimeUtils.formatMinutes(TimeUtils.toMinutes(_startTime))} - ${TimeUtils.formatMinutes(TimeUtils.toMinutes(_endTime))}',
-                  priorityLabel: _priorityLabel(_priority),
-                  priorityColor: _priorityColor(_priority),
-                  categoryId: _categoryId,
+                AnimatedBuilder(
+                  animation: _titleController,
+                  builder: (context, _) => _PreviewCard(
+                    title: _titleController.text.trim().isEmpty
+                        ? 'معاينة المهمة'
+                        : _titleController.text.trim(),
+                    dateLabel:
+                        intl.DateFormat('EEEE، d MMMM', 'ar').format(_date),
+                    timeLabel:
+                        '${TimeUtils.formatMinutes(TimeUtils.toMinutes(_startTime))} - ${TimeUtils.formatMinutes(TimeUtils.toMinutes(_endTime))}',
+                    priorityLabel: _priorityLabel(_priority),
+                    priorityColor: _priorityColor(_priority),
+                    categoryId: _categoryId,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 Row(

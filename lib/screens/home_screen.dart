@@ -127,7 +127,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 18),
                   _SectionHeader(
-                    title: 'مهام اليوم',
+                    title: 'خطة اليوم',
                     actionLabel: 'عرض الكل',
                     onAction: () => context.push('/today'),
                   ),
@@ -140,7 +140,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                   const SizedBox(height: 18),
                   _SectionHeader(
-                    title: 'وصول سريع',
+                    title: 'أدوات الإنتاجية',
                     actionLabel: '',
                     onAction: null,
                   ),

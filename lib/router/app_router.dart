@@ -51,7 +51,7 @@ final GoRouter appRouter = GoRouter(
               FilledButton.icon(
                 onPressed: () => context.go('/'),
                 icon: const Icon(Icons.home_outlined),
-                label: const Text('العودة للرئيسية'),
+                label: const Text('العودة للوحة التحكم'),
               ),
             ],
           ),
