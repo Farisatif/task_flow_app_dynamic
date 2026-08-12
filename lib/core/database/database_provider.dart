@@ -30,6 +30,7 @@ class _DatabaseBootstrapState extends State<DatabaseBootstrap> {
 
   Future<void> _initialize() async {
     await seedDatabaseIfEmpty(_db);
+    NotificationService.attachDatabase(_db);
     unawaited(NotificationService.rescheduleTasks(_db));
   }
 

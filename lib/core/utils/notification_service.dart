@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/material.dart';
@@ -358,6 +360,18 @@ class NotificationService {
   static const String _channelId = 'task_reminders';
   static bool _initialized = false;
   static bool _soundEnabled = true;
+  static AppDatabase? _database;
+  static NotificationResponse? _pendingAction;
+
+  static const String actionDone = 'task_done';
+  static const String actionSnooze10 = 'task_snooze_10';
+
+  static void attachDatabase(AppDatabase db) {
+    _database = db;
+    final pending = _pendingAction;
+    _pendingAction = null;
+    if (pending != null) unawaited(_handleAction(pending));
+  }
 
   static void setSoundEnabled(bool enabled) {
     _soundEnabled = enabled;
@@ -382,7 +396,11 @@ class NotificationService {
       await _plugin.initialize(
         settings,
         onDidReceiveNotificationResponse: (response) {
-          onTap?.call(response.payload);
+          if (response.actionId.isEmpty) {
+            onTap?.call(response.payload);
+          } else {
+            unawaited(_handleAction(response));
+          }
         },
       );
 
@@ -481,6 +499,20 @@ class NotificationService {
         priority: Priority.high,
         playSound: _soundEnabled,
         enableVibration: true,
+        actions: const [
+          AndroidNotificationAction(
+            actionDone,
+            'تم',
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+          AndroidNotificationAction(
+            actionSnooze10,
+            'غفوة 10 د',
+            showsUserInterface: true,
+            cancelNotification: true,
+          ),
+        ],
       ),
       iOS: DarwinNotificationDetails(
         presentAlert: true,
@@ -500,6 +532,37 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       payload: payload,
     );
+  }
+
+  static Future<void> _handleAction(NotificationResponse response) async {
+    final database = _database;
+    if (database == null) {
+      _pendingAction = response;
+      return;
+    }
+
+    final payload = response.payload ?? '';
+    final match = RegExp(r'/task-details/(\d+)').firstMatch(payload);
+    final taskId = int.tryParse(match?.group(1) ?? '');
+    if (taskId == null) return;
+
+    if (response.actionId == actionDone) {
+      await database.tasksDao.setStatus(taskId, TaskStatus.completed);
+      await cancelReminder(taskId);
+      return;
+    }
+
+    if (response.actionId == actionSnooze10) {
+      final task = await database.tasksDao.watchById(taskId).first;
+      if (task == null || task.status == TaskStatus.completed || task.isDeleted) {
+        return;
+      }
+      await scheduleTaskReminder(
+        taskId: task.id,
+        title: task.title,
+        scheduledTime: DateTime.now().add(const Duration(minutes: 10)),
+      );
+    }
   }
 
   static Future<void> rescheduleTasks(AppDatabase db) async {
