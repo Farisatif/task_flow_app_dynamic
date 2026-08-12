@@ -386,7 +386,7 @@ class NotificationService {
       tz.setLocalLocation(tz.getLocation(localTimezone.identifier));
 
       const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-      const iOS = DarwinInitializationSettings(
+      final iOS = DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
         requestSoundPermission: true,
@@ -405,7 +405,8 @@ class NotificationService {
       await _plugin.initialize(
         settings,
         onDidReceiveNotificationResponse: (response) {
-          if (response.actionId.isEmpty) {
+          final actionId = response.actionId;
+          if (actionId == null || actionId.isEmpty) {
             onTap?.call(response.payload);
           } else {
             unawaited(_handleAction(response));
