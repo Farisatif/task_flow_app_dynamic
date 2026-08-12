@@ -51,7 +51,9 @@ class TaskFlowApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => ThemeProvider()),
+        ChangeNotifierProvider(
+          create: (context) => ThemeProvider(db: context.read<AppDatabase>()),
+        ),
         ChangeNotifierProvider(
           create: (context) => SettingsProvider(context.read<AppDatabase>()),
         ),

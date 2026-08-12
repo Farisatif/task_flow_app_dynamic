@@ -48,9 +48,27 @@ class SettingsScreen extends StatelessWidget {
                 _SwitchTile(
                   icon: Icons.dark_mode_outlined,
                   title: 'الوضع الليلي',
-                  subtitle: 'تبديل السمة الداكنة أو الفاتحة',
+                  subtitle: themeProvider.followsSystem
+                      ? 'مُدار تلقائيًا حسب إعداد الجهاز'
+                      : 'تبديل السمة الداكنة أو الفاتحة',
                   value: themeProvider.isDark,
-                  onChanged: (v) => themeProvider.setDark(v),
+                  onChanged: themeProvider.followsSystem
+                      ? null
+                      : (v) => themeProvider.setDark(v),
+                ),
+                const _Divider(),
+                _SwitchTile(
+                  icon: Icons.brightness_auto_outlined,
+                  title: 'مطابقة إعداد الجهاز',
+                  subtitle: 'تغيير المظهر تلقائيًا مع وضع النظام',
+                  value: themeProvider.followsSystem,
+                  onChanged: (v) {
+                    if (v) {
+                      themeProvider.setMode(ThemeMode.system);
+                    } else {
+                      themeProvider.setDark(themeProvider.isDark);
+                    }
+                  },
                 ),
                 const _Divider(),
                 _ActionTile(
@@ -566,14 +584,14 @@ class _SwitchTile extends StatelessWidget {
   final String title;
   final String subtitle;
   final bool value;
-  final ValueChanged<bool> onChanged;
+  final ValueChanged<bool>? onChanged;
 
   const _SwitchTile({
     required this.icon,
     required this.title,
     required this.subtitle,
     required this.value,
-    required this.onChanged,
+    this.onChanged,
   });
 
   @override

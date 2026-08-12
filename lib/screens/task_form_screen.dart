@@ -41,19 +41,11 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
   @override
   void initState() {
     super.initState();
-    _titleController.addListener(_onTextChanged);
-    _notesController.addListener(_onTextChanged);
     _loadIfEditing();
-  }
-
-  void _onTextChanged() {
-    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    _titleController.removeListener(_onTextChanged);
-    _notesController.removeListener(_onTextChanged);
     _titleController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -512,19 +504,25 @@ class _TaskFormScreenState extends State<TaskFormScreen> {
                     subtitle: 'كيف ستبدو المهمة بعد الحفظ',
                   ),
                   const SizedBox(height: 10),
-                  _PreviewCard(
-                    title: _titleController.text.trim().isEmpty
-                        ? 'عنوان المهمة'
-                        : _titleController.text.trim(),
-                    dateLabel: _formatDate(_date),
-                    timeLabel: '${_formatTime(_start)} - ${_formatTime(_end)}',
-                    priorityLabel: _priorityLabel(_priority),
-                    priorityColor: _priorityColor(_priority),
-                    notesLabel: _notesController.text.trim().isEmpty
-                        ? 'لا توجد ملاحظات'
-                        : _notesController.text.trim(),
-                    hasCategory: _categoryId != null,
-                    hasProject: _projectId != null,
+                  AnimatedBuilder(
+                    animation: Listenable.merge([
+                      _titleController,
+                      _notesController,
+                    ]),
+                    builder: (context, _) => _PreviewCard(
+                      title: _titleController.text.trim().isEmpty
+                          ? 'عنوان المهمة'
+                          : _titleController.text.trim(),
+                      dateLabel: _formatDate(_date),
+                      timeLabel: '${_formatTime(_start)} - ${_formatTime(_end)}',
+                      priorityLabel: _priorityLabel(_priority),
+                      priorityColor: _priorityColor(_priority),
+                      notesLabel: _notesController.text.trim().isEmpty
+                          ? 'لا توجد ملاحظات'
+                          : _notesController.text.trim(),
+                      hasCategory: _categoryId != null,
+                      hasProject: _projectId != null,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   Row(
