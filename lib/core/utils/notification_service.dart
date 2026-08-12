@@ -369,7 +369,7 @@ class NotificationService {
     try {
       tz_data.initializeTimeZones();
       final localTimezone = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(localTimezone.name));
+      tz.setLocalLocation(tz.getLocation(localTimezone.identifier));
 
       const android = AndroidInitializationSettings('@mipmap/ic_launcher');
       const iOS = DarwinInitializationSettings(
