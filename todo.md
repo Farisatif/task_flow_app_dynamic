@@ -27,3 +27,4 @@
 - [x] Force compileSdk 36 across Android plugin subprojects for file_picker AAR compatibility
 - [x] Replace invalid Gradle afterEvaluate SDK override with Android Components finalizeDsl configuration
 - [x] Remove late root Gradle SDK hooks and replace incompatible file_picker dependency path
+- [x] Switch Gradle Wrapper to the smaller direct binary distribution and extend download timeout
