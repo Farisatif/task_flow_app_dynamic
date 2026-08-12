@@ -13,6 +13,7 @@
 - [x] Improve dashboard loading and error feedback at the app entry point
 - [x] Remove dashboard drag ordering that was not persisted and retain real task completion actions
 - [ ] Improve dashboard navigation and task flow feedback
+- [x] Improve reminders loading and error feedback around notification management
 - [x] Replace the unlinked help placeholder with an in-app usage guide
 - [ ] Replace or clearly scope remaining placeholder functionality
 - [ ] Add Flutter test coverage for core task, calendar, and habit workflows

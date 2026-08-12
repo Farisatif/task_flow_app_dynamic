@@ -5,6 +5,7 @@ import '../core/database/database.dart';
 import '../core/utils/notification_service.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/app_state_view.dart';
 
 enum _ReminderFilter { all, active, inactive }
 
@@ -79,12 +80,15 @@ class _RemindersScreenState extends State<RemindersScreen> {
       body: StreamBuilder<List<Reminder>>(
         stream: db.remindersDao.watchAll(),
         builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const AppLoadingState(label: 'جارٍ تحميل التذكيرات…');
+          }
           if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'حدث خطأ أثناء تحميل التذكيرات',
-                style: theme.textTheme.bodyMedium,
-              ),
+            return const AppErrorState(
+              title: 'تعذر تحميل التذكيرات',
+              message:
+                  'تعذر الوصول إلى قائمة التذكيرات الآن. لن تُفقد الإشعارات التي سبق جدولتها.',
             );
           }
 
