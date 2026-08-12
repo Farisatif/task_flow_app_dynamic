@@ -14,6 +14,7 @@
 - [x] Remove dashboard drag ordering that was not persisted and retain real task completion actions
 - [ ] Improve dashboard navigation and task flow feedback
 - [x] Improve reminders loading and error feedback around notification management
+- [x] Improve focus dashboard loading, error, and empty feedback
 - [x] Replace backup simulation with real local snapshot creation, listing, restore, and deletion
 - [ ] Replace attachment metadata-only creation with real file picking and private local storage
 - [x] Replace attachment metadata-only creation with real file picking and private local storage

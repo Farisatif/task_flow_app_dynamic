@@ -12,6 +12,7 @@ import '../core/database/database.dart';
 import '../core/database/dao/statistics_dao.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/app_state_view.dart';
 
 class FocusDashboardScreen extends StatefulWidget {
   const FocusDashboardScreen({super.key});
@@ -65,16 +66,14 @@ class _FocusDashboardScreenState extends State<FocusDashboardScreen> {
             stream: db.statisticsDao.watchFocusStatisticsForDate(_selectedDate),
             builder: (context, statsSnapshot) {
               if (statsSnapshot.hasError) {
-                return Center(
-                  child: Text(
-                    'تعذر تحميل البيانات',
-                    style: theme.textTheme.bodyMedium,
-                  ),
+                return const AppErrorState(
+                  title: 'تعذر تحميل جلسات التركيز',
+                  message: 'تحقق من بيانات التطبيق ثم أعد فتح هذه الصفحة.',
                 );
               }
 
               if (!statsSnapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+                return const AppLoadingState(label: 'جارٍ تحميل جلسات التركيز…');
               }
 
               final stats = statsSnapshot.data!;
@@ -178,14 +177,13 @@ class _FocusDashboardScreenState extends State<FocusDashboardScreen> {
                   ),
                   const SizedBox(height: 10),
                   if (sessions.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Center(
-                        child: Text(
-                          'لا توجد جلسات تركيز بعد',
-                          style: theme.textTheme.bodyMedium,
-                        ),
-                      ),
+                    AppEmptyState(
+                      icon: Icons.timer_outlined,
+                      title: 'لا توجد جلسات تركيز بعد',
+                      message:
+                          'ابدأ جلسة قصيرة الآن لتظهر إحصاءات تركيزك هنا.',
+                      actionLabel: 'ابدأ جلسة',
+                      onAction: () => context.push('/focus-timer'),
                     )
                   else
                     ...sessions.take(5).map((session) {
