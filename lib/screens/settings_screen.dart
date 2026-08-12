@@ -149,14 +149,8 @@ class SettingsScreen extends StatelessWidget {
                 _ActionTile(
                   icon: Icons.help_outline_rounded,
                   title: 'مساعدة ودعم',
-                  subtitle: 'أسئلة شائعة ومركز الدعم',
-                  onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('صفحة المساعدة لم تُربط بعد.'),
-                      ),
-                    );
-                  },
+                  subtitle: 'دليل مختصر لاستخدام Task Flow',
+                  onTap: () => _showHelpDialog(context),
                 ),
                 const _Divider(),
                 _ActionTile(
@@ -202,6 +196,29 @@ class SettingsScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('فهمت'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showHelpDialog(BuildContext context) async {
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('دليل Task Flow'),
+        content: const SingleChildScrollView(
+          child: Text(
+            'ابدأ من لوحة التحكم لإضافة مهمة سريعة أو متابعة خطة اليوم. '
+            'اضغط على المهمة لفتح تفاصيلها، أو اضغط مطولًا عليها للوصول إلى إجراءات إضافية.\n\n'
+            'تظهر التذكيرات المجدولة في صفحة «إعدادات التذكيرات»، ويمكنك تسجيل جلسات تركيز من قسم التركيز. '
+            'تُخزّن بياناتك محليًا على الجهاز، لذلك استخدم النسخ الاحتياطي بعد تفعيل التصدير الفعلي قبل تغيير الجهاز أو حذف التطبيق.',
+          ),
+        ),
+        actions: [
+          FilledButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
             child: const Text('فهمت'),
           ),

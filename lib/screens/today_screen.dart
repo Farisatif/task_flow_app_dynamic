@@ -7,6 +7,7 @@ import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/app_state_view.dart';
 
 class TodayScreen extends StatelessWidget {
   const TodayScreen({super.key});
@@ -37,12 +38,15 @@ class TodayScreen extends StatelessWidget {
       body: StreamBuilder<List<Task>>(
         stream: db.tasksDao.watchTasksForDate(today),
         builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const AppLoadingState(label: 'جارٍ تحميل خطة اليوم…');
+          }
           if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'حدث خطأ أثناء تحميل مهام اليوم',
-                style: theme.textTheme.bodyMedium,
-              ),
+            return const AppErrorState(
+              title: 'تعذر تحميل خطة اليوم',
+              message:
+                  'سيحاول التطبيق استعادة البيانات تلقائيًا عند عودة الاتصال بقاعدة البيانات.',
             );
           }
 

@@ -6,6 +6,7 @@ import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../core/theme/app_colors.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/app_state_view.dart';
 import '../widgets/task_tile.dart';
 
 class TaskListScreen extends StatefulWidget {
@@ -93,12 +94,15 @@ class _TaskListScreenState extends State<TaskListScreen> {
       body: StreamBuilder<List<Task>>(
         stream: db.tasksDao.watchAll(),
         builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const AppLoadingState(label: 'جارٍ تحميل قائمة المهام…');
+          }
           if (snapshot.hasError) {
-            return Center(
-              child: Text(
-                'حدث خطأ أثناء تحميل المهام',
-                style: theme.textTheme.bodyMedium,
-              ),
+            return const AppErrorState(
+              title: 'تعذر تحميل قائمة المهام',
+              message:
+                  'تحقق من بيانات التطبيق ثم أعد فتح هذه الصفحة. لن تُفقد مهامك المحفوظة.',
             );
           }
 

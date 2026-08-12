@@ -22,11 +22,37 @@ class ProfileScreen extends StatelessWidget {
       body: StreamBuilder<ProfileRow?>(
         stream: db.profileDao.watchProfile(),
         builder: (context, profileSnapshot) {
+          if (profileSnapshot.connectionState == ConnectionState.waiting &&
+              !profileSnapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
           if (profileSnapshot.hasError) {
             return Center(
-              child: Text(
-                'حدث خطأ أثناء تحميل الملف الشخصي',
-                style: theme.textTheme.bodyMedium,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.person_off_outlined,
+                      size: 40,
+                      color: theme.colorScheme.error,
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      'تعذر تحميل الملف الشخصي',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      'لم تُفقد بياناتك. أعد فتح الصفحة بعد لحظات.',
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
               ),
             );
           }
@@ -97,13 +123,7 @@ class ProfileScreen extends StatelessWidget {
                         icon: Icons.security_outlined,
                         title: 'الأمان والخصوصية',
                         subtitle: 'إعدادات القفل والخصوصية',
-                        onTap: () {},
-                      ),
-                      _MenuTile(
-                        icon: Icons.language_outlined,
-                        title: 'اللغة',
-                        subtitle: 'واجهة التطبيق واللغة',
-                        onTap: () {},
+                        onTap: () => context.push('/settings'),
                       ),
                     ],
                   ),

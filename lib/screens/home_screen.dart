@@ -7,9 +7,11 @@ import 'package:intl/intl.dart' as intl;
 import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../core/theme/app_colors.dart';
+import '../core/utils/sound_service.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/app_state_view.dart';
 import '../widgets/quick_add_modal.dart';
-import '../widgets/reorderable_task_list.dart';
+import '../widgets/task_tile.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -19,7 +21,6 @@ class HomeScreen extends StatelessWidget {
     final db = context.watch<AppDatabase>();
     final today = DateUtils.dateOnly(DateTime.now());
     final dateStr = intl.DateFormat('EEEE، d MMMM yyyy', 'ar').format(today);
-    final theme = Theme.of(context);
 
     return AppScaffold(
       title: '',
@@ -34,12 +35,15 @@ class HomeScreen extends StatelessWidget {
       body: StreamBuilder<List<Task>>(
         stream: db.tasksDao.watchTasksForDate(today),
         builder: (context, taskSnapshot) {
+          if (taskSnapshot.connectionState == ConnectionState.waiting &&
+              !taskSnapshot.hasData) {
+            return const AppLoadingState(label: 'جارٍ تجهيز لوحة التحكم…');
+          }
           if (taskSnapshot.hasError) {
-            return Center(
-              child: Text(
-                'حدث خطأ أثناء تحميل مهام اليوم',
-                style: theme.textTheme.bodyMedium,
-              ),
+            return const AppErrorState(
+              title: 'تعذر تحميل لوحة التحكم',
+              message:
+                  'تعذر الوصول إلى مهام اليوم الآن. لن تُفقد بياناتك المحفوظة.',
             );
           }
 
@@ -135,8 +139,19 @@ class HomeScreen extends StatelessWidget {
                   if (tasks.isEmpty)
                     _EmptyState(onAdd: () => QuickAddModal.show(context))
                   else
-                    ReorderableTaskList(
-                      tasks: tasks.take(6).toList(),
+                    ...tasks.take(6).map(
+                      (task) => TaskTile(
+                        task: task,
+                        onTap: () => context.push('/task-details/${task.id}'),
+                        onCheck: (checked) {
+                          final done = checked ?? false;
+                          if (done) SoundService.playTaskComplete(context);
+                          db.tasksDao.setStatus(
+                            task.id,
+                            done ? TaskStatus.completed : TaskStatus.pending,
+                          );
+                        },
+                      ),
                     ),
                   const SizedBox(height: 18),
                   _SectionHeader(
