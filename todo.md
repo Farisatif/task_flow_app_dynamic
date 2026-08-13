@@ -29,3 +29,4 @@
 - [x] Remove late root Gradle SDK hooks and replace incompatible file_picker dependency path
 - [x] Switch Gradle Wrapper to the smaller direct binary distribution and extend download timeout
 - [x] Replace unsupported Activity Result API usage with FlutterActivity-compatible document result handling
+- [x] Fix quick-add, nested category picker, and task action menu cancellation lifecycle updates

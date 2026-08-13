@@ -1,6 +1,5 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../core/database/database.dart';
@@ -14,8 +13,8 @@ class TaskActionMenu extends StatelessWidget {
 
   const TaskActionMenu({super.key, required this.task});
 
-  static Future<void> show(BuildContext context, Task task) {
-    return showModalBottomSheet<void>(
+  static Future<TaskActionMenuResult?> show(BuildContext context, Task task) {
+    return showModalBottomSheet<TaskActionMenuResult>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
@@ -39,7 +38,6 @@ class TaskActionMenu extends StatelessWidget {
     final db = context.read<AppDatabase>();
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final router = GoRouter.of(context);
     final isCompleted = task.isDone;
 
     return Container(
@@ -72,8 +70,7 @@ class TaskActionMenu extends StatelessWidget {
               icon: Icons.edit_outlined,
               label: 'تعديل المهمة',
               onTap: () {
-                Navigator.of(context).pop();
-                router.push('/task-form/${task.id}');
+                Navigator.of(context).pop(TaskActionMenuResult.edit);
               },
             ),
             _ActionTile(
@@ -182,6 +179,8 @@ class TaskActionMenu extends StatelessWidget {
     );
   }
 }
+
+enum TaskActionMenuResult { edit }
 
 class _Header extends StatelessWidget {
   final String title;

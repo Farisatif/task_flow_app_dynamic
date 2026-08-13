@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import '../core/database/database.dart';
 import '../core/database/tables.dart';
 import '../core/theme/app_colors.dart';
@@ -28,7 +29,13 @@ class TaskTile extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        onLongPress: () => TaskActionMenu.show(context, task),
+        onLongPress: () async {
+          final action = await TaskActionMenu.show(context, task);
+          if (!context.mounted || action == null) return;
+          if (action == TaskActionMenuResult.edit) {
+            context.push('/task-form/${task.id}');
+          }
+        },
         borderRadius: BorderRadius.circular(18),
         child: Container(
           margin: const EdgeInsets.only(bottom: 10),

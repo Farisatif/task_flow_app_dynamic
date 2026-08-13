@@ -80,6 +80,7 @@ class _QuickAddModalState extends State<QuickAddModal> {
     _syncEndTimeIfNeeded();
     setState(() => _saving = true);
 
+    var dismissedAfterSave = false;
     try {
       final db = context.read<AppDatabase>();
 
@@ -113,6 +114,7 @@ class _QuickAddModalState extends State<QuickAddModal> {
       await SoundService.playTaskCreate(context);
 
       if (!mounted) return;
+      dismissedAfterSave = true;
       Navigator.of(context).pop();
     } catch (_) {
       if (!mounted) return;
@@ -122,7 +124,8 @@ class _QuickAddModalState extends State<QuickAddModal> {
         ),
       );
     } finally {
-      if (mounted) setState(() => _saving = false);
+      // لا نعيد بناء النافذة وهي في حركة الإغلاق بعد الحفظ.
+      if (!dismissedAfterSave && mounted) setState(() => _saving = false);
     }
   }
 
@@ -364,7 +367,12 @@ class _QuickAddModalState extends State<QuickAddModal> {
                   children: [
                     Expanded(
                       child: OutlinedButton(
-                        onPressed: _saving ? null : () => Navigator.pop(context),
+                        onPressed: _saving
+                            ? null
+                            : () {
+                                FocusManager.instance.primaryFocus?.unfocus();
+                                Navigator.of(context).maybePop();
+                              },
                         style: OutlinedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(
@@ -567,7 +575,8 @@ class _CategoryPicker extends StatelessWidget {
     BuildContext context,
     List<Category> categories,
   ) async {
-    await showModalBottomSheet<void>(
+    FocusManager.instance.primaryFocus?.unfocus();
+    final selection = await showModalBottomSheet<_CategorySelection>(
       context: context,
       showDragHandle: true,
       builder: (sheetContext) {
@@ -580,10 +589,9 @@ class _CategoryPicker extends StatelessWidget {
               ListTile(
                 leading: const Icon(Icons.block_rounded),
                 title: const Text('بدون تصنيف'),
-                onTap: () {
-                  onSelected(null);
-                  Navigator.of(sheetContext).pop();
-                },
+                onTap: () => Navigator.of(sheetContext).pop(
+                  const _CategorySelection(null),
+                ),
               ),
               const Divider(height: 1),
               ...categories.map(
@@ -594,10 +602,9 @@ class _CategoryPicker extends StatelessWidget {
                     size: 18,
                   ),
                   title: Text(category.name),
-                  onTap: () {
-                    onSelected(category.id);
-                    Navigator.of(sheetContext).pop();
-                  },
+                  onTap: () => Navigator.of(sheetContext).pop(
+                    _CategorySelection(category.id),
+                  ),
                 ),
               ),
             ],
@@ -605,7 +612,17 @@ class _CategoryPicker extends StatelessWidget {
         );
       },
     );
+
+    if (selection != null && context.mounted) {
+      onSelected(selection.id);
+    }
   }
+}
+
+class _CategorySelection {
+  final int? id;
+
+  const _CategorySelection(this.id);
 }
 
 class _PreviewCard extends StatelessWidget {
