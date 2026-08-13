@@ -302,7 +302,8 @@ class _RemindersScreenState extends State<RemindersScreen> {
     AppDatabase db,
   ) async {
     final titleController = TextEditingController();
-    final timeController = TextEditingController(text: '09:00 - اليوم');
+    var selectedTime = const TimeOfDay(hour: 9, minute: 0);
+    var saving = false;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -310,180 +311,262 @@ class _RemindersScreenState extends State<RemindersScreen> {
       backgroundColor: Colors.transparent,
       useSafeArea: true,
       builder: (sheetContext) {
-        final theme = Theme.of(sheetContext);
-        final bottomPadding = MediaQuery.of(sheetContext).viewInsets.bottom;
+        return StatefulBuilder(
+          builder: (sheetContext, setSheetState) {
+            final theme = Theme.of(sheetContext);
+            final bottomPadding = MediaQuery.of(sheetContext).viewInsets.bottom;
+            final timeLabel = _formatReminderTime(selectedTime);
+            final displayTime = MaterialLocalizations.of(sheetContext)
+                .formatTimeOfDay(selectedTime);
 
-        return Padding(
-          padding: EdgeInsets.only(bottom: bottomPadding),
-          child: Container(
-            decoration: BoxDecoration(
-              color: theme.scaffoldBackgroundColor,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(28),
-              ),
-            ),
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 42,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: theme.dividerColor.withOpacity(0.35),
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                    ),
+            Future<void> pickTime() async {
+              FocusManager.instance.primaryFocus?.unfocus();
+              final picked = await showTimePicker(
+                context: sheetContext,
+                initialTime: selectedTime,
+              );
+              if (picked != null && sheetContext.mounted) {
+                setSheetState(() => selectedTime = picked);
+              }
+            }
+
+            return Padding(
+              padding: EdgeInsets.only(bottom: bottomPadding),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: theme.scaffoldBackgroundColor,
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(28),
                   ),
-                  const SizedBox(height: 18),
-                  Row(
+                ),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.12),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: const Icon(
-                          Icons.add_alert_rounded,
-                          color: AppColors.primary,
+                      Center(
+                        child: Container(
+                          width: 42,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: theme.dividerColor.withOpacity(0.35),
+                            borderRadius: BorderRadius.circular(999),
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'تذكير جديد',
-                              style: theme.textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.w800,
-                              ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(18),
                             ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'أنشئ تذكيرًا سريعًا ليظهر في قائمتك',
-                              style: theme.textTheme.bodyMedium,
+                            child: const Icon(
+                              Icons.add_alert_rounded,
+                              color: AppColors.primary,
                             ),
-                          ],
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'تذكير جديد',
+                                  style: theme.textTheme.titleLarge?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'اختر الساعة بدل كتابة الوقت يدويًا',
+                                  style: theme.textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 18),
+                      TextField(
+                        controller: titleController,
+                        autofocus: true,
+                        textInputAction: TextInputAction.done,
+                        decoration: InputDecoration(
+                          labelText: 'العنوان',
+                          hintText: 'مثال: شرب الماء',
+                          filled: true,
+                          fillColor: theme.colorScheme.surfaceContainerHighest
+                              .withOpacity(0.35),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'وقت التذكير',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
+                        onPressed: saving ? null : pickTime,
+                        style: OutlinedButton.styleFrom(
+                          minimumSize: const Size.fromHeight(58),
+                          alignment: Alignment.centerRight,
+                          side: BorderSide(
+                            color: AppColors.primary.withOpacity(0.24),
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        icon: const Icon(Icons.access_time_rounded),
+                        label: Text(
+                          displayTime,
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          (label: '8 صباحًا', time: const TimeOfDay(hour: 8, minute: 0)),
+                          (label: '12 ظهرًا', time: const TimeOfDay(hour: 12, minute: 0)),
+                          (label: '6 مساءً', time: const TimeOfDay(hour: 18, minute: 0)),
+                        ].map((shortcut) {
+                          final isSelected = shortcut.time == selectedTime;
+                          return ChoiceChip(
+                            label: Text(shortcut.label),
+                            selected: isSelected,
+                            onSelected: saving
+                                ? null
+                                : (_) => setSheetState(
+                                      () => selectedTime = shortcut.time,
+                                    ),
+                          );
+                        }).toList(),
+                      ),
+                      const SizedBox(height: 18),
+                      AnimatedBuilder(
+                        animation: titleController,
+                        builder: (context, _) => _ReminderPreview(
+                          title: titleController.text.trim().isEmpty
+                              ? 'معاينة التذكير'
+                              : titleController.text.trim(),
+                          timeLabel: timeLabel,
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: saving
+                                  ? null
+                                  : () {
+                                      FocusManager.instance.primaryFocus?.unfocus();
+                                      Navigator.of(sheetContext).maybePop();
+                                    },
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: const Text('إلغاء'),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: FilledButton(
+                              onPressed: saving
+                                  ? null
+                                  : () async {
+                                      final title = titleController.text.trim();
+                                      if (title.isEmpty) return;
+
+                                      setSheetState(() => saving = true);
+                                      var dismissedAfterSave = false;
+                                      try {
+                                        final reminderId = await db.remindersDao
+                                            .insertReminder(
+                                          RemindersCompanion.insert(
+                                            title: title,
+                                            timeLabel: timeLabel,
+                                          ),
+                                        );
+                                        await NotificationService.scheduleUserReminder(
+                                          reminderId: reminderId,
+                                          title: title,
+                                          scheduledTime:
+                                              _nextReminderTime(selectedTime),
+                                        );
+
+                                        if (!sheetContext.mounted) return;
+                                        dismissedAfterSave = true;
+                                        Navigator.of(sheetContext).pop();
+                                      } catch (_) {
+                                        if (!sheetContext.mounted) return;
+                                        ScaffoldMessenger.of(sheetContext).showSnackBar(
+                                          const SnackBar(
+                                            content: Text('تعذر حفظ التذكير، حاول مرة أخرى.'),
+                                          ),
+                                        );
+                                      } finally {
+                                        if (!dismissedAfterSave && sheetContext.mounted) {
+                                          setSheetState(() => saving = false);
+                                        }
+                                      }
+                                    },
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              child: Text(saving ? 'جارٍ الحفظ...' : 'إضافة'),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                  const SizedBox(height: 18),
-                  TextField(
-                    controller: titleController,
-                    autofocus: true,
-                    textInputAction: TextInputAction.next,
-                    decoration: InputDecoration(
-                      labelText: 'العنوان',
-                      hintText: 'مثال: شرب الماء',
-                      filled: true,
-                      fillColor: theme.colorScheme.surfaceContainerHighest
-                          .withOpacity(0.35),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: timeController,
-                    textInputAction: TextInputAction.done,
-                    decoration: InputDecoration(
-                      labelText: 'التوقيت',
-                      hintText: 'مثال: 09:00 - اليوم',
-                      filled: true,
-                      fillColor: theme.colorScheme.surfaceContainerHighest
-                          .withOpacity(0.35),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 18),
-                  _ReminderPreview(
-                    title: titleController.text.trim().isEmpty
-                        ? 'معاينة التذكير'
-                        : titleController.text.trim(),
-                    timeLabel: timeController.text.trim().isEmpty
-                        ? 'بدون توقيت'
-                        : timeController.text.trim(),
-                  ),
-                  const SizedBox(height: 18),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () => Navigator.of(sheetContext).pop(),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: const Text('إلغاء'),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: FilledButton(
-                          onPressed: () async {
-                            final title = titleController.text.trim();
-                            final timeLabel = timeController.text.trim();
-
-                            if (title.isEmpty) return;
-
-                            final reminderId =
-                                await db.remindersDao.insertReminder(
-                              RemindersCompanion.insert(
-                                title: title,
-                                timeLabel:
-                                    timeLabel.isEmpty ? 'بدون توقيت' : timeLabel,
-                              ),
-                            );
-
-                            final scheduledTime =
-                                _parseNextReminderTime(timeLabel);
-                            if (scheduledTime != null) {
-                              await NotificationService.scheduleUserReminder(
-                                reminderId: reminderId,
-                                title: title,
-                                scheduledTime: scheduledTime,
-                              );
-                            }
-
-                            if (!mounted) return;
-                            Navigator.of(sheetContext).pop();
-                          },
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: const Text('إضافة'),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
 
     titleController.dispose();
-    timeController.dispose();
+  }
+
+  String _formatReminderTime(TimeOfDay time) {
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$hour:$minute - اليوم';
+  }
+
+  DateTime _nextReminderTime(TimeOfDay time) {
+    final now = DateTime.now();
+    var scheduled = DateTime(now.year, now.month, now.day, time.hour, time.minute);
+    if (!scheduled.isAfter(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+    return scheduled;
   }
 }
 

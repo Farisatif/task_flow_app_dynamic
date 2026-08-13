@@ -30,3 +30,4 @@
 - [x] Switch Gradle Wrapper to the smaller direct binary distribution and extend download timeout
 - [x] Replace unsupported Activity Result API usage with FlutterActivity-compatible document result handling
 - [x] Fix quick-add, nested category picker, and task action menu cancellation lifecycle updates
+- [x] Replace reminder manual time text entry with a visual hour and minute picker
